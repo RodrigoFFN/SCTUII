@@ -81,31 +81,3 @@ State; permitir eventos de Observer; despues visualizar en SFML 3.
 
 El documento `docs/diseno_inicial.md` explica la organizacion prevista del
 sistema y distingue las clases implementadas de las que aun faltan.
-
-## Subir a GitHub
-
-Desde la carpeta del proyecto, despues de configurar tu nombre y correo en Git:
-
-```bash
-git init
-git add .
-git commit -m "feat: estructura inicial y prototipo de SimTrrafic"
-git branch -M main
-git tag v0.1.0
-```
-
-Crea un repositorio **vacio** en GitHub y ejecuta los comandos siguientes,
-reemplazando `USUARIO` por el propietario real de la cuenta o la organizacion:
-
-```bash
-git remote add origin https://github.com/USUARIO/SimTrrafic.git
-git push -u origin main
-git push origin v0.1.0
-```
-
-## Referencias tecnicas
-
-- [Documentacion CMake - CXX_STANDARD](https://cmake.org/cmake/help/latest/prop_tgt/CXX_STANDARD.html)
-- [SFML - Getting and Using SFML](https://www.sfml-dev.org/faq/build-use/)
-- [SFML - CMake Project Template](https://www.sfml-dev.org/tutorials/3.0/getting-started/cmake/)
-
