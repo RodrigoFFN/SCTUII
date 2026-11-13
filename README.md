@@ -1,32 +1,37 @@
 # SimTrrafic (SIM-TRAFIC)
 
-**Simulador Concurrente de Trafico Urbano e Intersecciones Inteligentes**  
-**Curso:** Tecnologia de Objetos (TEO)  
-**Version:** `v0.1.0` - primer avance
+**Simulador Concurrente de Tráfico Urbano e Intersecciones Inteligentes**  
+**Curso:** Tecnología de Objetos (TEO)  
+**Versión:** `v0.2.0` - segunda iteración
 
-SimTrrafic es un proyecto academico en C++17 para simular una interseccion urbana,
-con vehiculos, semaforos y concurrencia. Este primer avance contiene un **prototipo
-de consola con un solo carril**. La GUI 2D y los patrones Factory Method, State y
-Observer completos se incorporaran de forma progresiva; **todavia no estan
-implementados**.
+SimTrrafic es un proyecto académico en **C++17** que simula una intersección urbana
+con hilos, vehículos y semáforos. El programa funciona en **consola**; todavía
+no tiene interfaz gráfica.
 
-## Que funciona en este avance
+## Funcionalidades actuales
 
-- Clase generica `ColaConcurrente<T>` creada desde cero con `std::mutex` y `std::condition_variable`.
-- Modelo basico `Vehiculo` con identificador y tipo.
-- Clase `Semaforo` con estados rojo y verde y espera bloqueante.
-- Tres tareas concurrentes (`std::thread`): generar, controlar semaforo y despachar.
-- Registro de la llegada y el paso de 8 vehiculos sin interfaz grafica.
-- Prueba de concurrencia con 4 productores, 3 consumidores y 400 elementos.
+- `ColaConcurrente<T>`: cola genérica con `mutex`, `condition_variable`, cierre y extracción bloqueante.
+- `Vehiculo`: identificador y tipo (`Auto` o `Bus`).
+- `Semaforo`: semáforo básico con luces roja y verde.
+- `Interseccion`: coordina las luces de los ejes **Norte-Sur** y **Este-Oeste**
+  para que nunca estén verdes simultáneamente.
+- **Cinco hilos**: dos generadores, dos despachadores y un controlador de semáforos.
+- Simulación de **12 vehículos** (6 por eje), con un intervalo en que ambas luces
+  permanecen rojas entre fases.
+- Pruebas para la cola concurrente y para la exclusión de fases de la intersección.
+
+> Alcance: este es un prototipo de sincronización de semáforos, no un simulador de
+> seguridad vial. El paso se autoriza cuando se observa luz verde; aún no se
+> modelan ocupación física del cruce, colisiones, tiempos configurables ni peatones.
 
 ## Requisitos
 
-- Compilador con soporte **C++17** (GCC, Clang o MSVC moderno).
-- Biblioteca estandar de C++ con soporte de hilos.
-- **Opcional:** CMake 3.16 o superior para compilar y ejecutar las pruebas con CTest.
-- **SFML no se necesita en esta version**: esta prevista para el segundo avance.
+- Compilador con soporte para C++17 (GCC, Clang o MSVC moderno).
+- CMake 3.16 o superior (recomendado).
+- Soporte de hilos de la biblioteca estándar.
+- **No hace falta SFML** para ejecutar esta versión.
 
-## Compilar y ejecutar con CMake
+## Compilar y probar con CMake
 
 ```bash
 cmake -S . -B build
@@ -34,12 +39,14 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Ejecutar: `./build/simtrrafic` (Linux) o `build\\Debug\\simtrrafic.exe` (Windows,
-si se utiliza el generador de Visual Studio). La ruta depende del generador.
+Para ejecutar la simulación:
 
-## Alternativa con g++ (sin CMake)
+- Linux: `./build/simtrrafic`
+- Windows (Visual Studio): `build\\Debug\\simtrrafic.exe`
 
-En Linux, WSL o MinGW-w64 con soporte de hilos:
+La ruta del ejecutable puede cambiar según el generador de CMake.
+
+## Compilar con g++ sin CMake
 
 ```bash
 g++ -std=c++17 -Wall -Wextra -pthread -Iinclude src/main.cpp -o simtrrafic
@@ -47,37 +54,38 @@ g++ -std=c++17 -Wall -Wextra -pthread -Iinclude src/main.cpp -o simtrrafic
 
 g++ -std=c++17 -Wall -Wextra -pthread -Iinclude tests/test_concurrencia.cpp -o test_concurrencia
 ./test_concurrencia
+
+g++ -std=c++17 -Wall -Wextra -pthread -Iinclude tests/test_interseccion.cpp -o test_interseccion
+./test_interseccion
 ```
 
-## Estructura
+## Estructura del repositorio
 
 ```text
 SimTrrafic/
-|-- CMakeLists.txt
-|-- README.md
-|-- .gitignore
-|-- include/
-|   |-- Vehiculo.hpp
-|   |-- ColaConcurrente.hpp
-|   `-- Semaforo.hpp
-|-- src/
-|   `-- main.cpp
-|-- docs/
-|   `-- diseno_inicial.md
-`-- tests/
-    `-- test_concurrencia.cpp
+├── CMakeLists.txt
+├── README.md
+├── .gitignore
+├── include/
+│   ├── ColaConcurrente.hpp
+│   ├── Interseccion.hpp        # Nuevo: coordinación de dos ejes
+│   ├── Semaforo.hpp
+│   └── Vehiculo.hpp
+├── src/
+│   └── main.cpp                # Simulación de dos ejes
+├── docs/
+│   └── diseno_inicial.md
+└── tests/
+    ├── test_concurrencia.cpp
+    └── test_interseccion.cpp  # Nuevo: prueba de exclusión de fases
 ```
 
-## Limites actuales y siguientes entregas
+## Próximos avances
 
-En el primer avance solo se simula **un carril** y se despacha un vehiculo a la
-vez. El estado del semaforo se comprueba antes de empezar a cruzar; un vehiculo
-que ya comenzo puede terminar su paso cuando la luz cambia. No existen peatones,
-colisiones, varias direcciones ni parametros configurables en esta version.
+1. Crear clases `Carril` y `Simulador` para separar las responsabilidades del `main`.
+2. Introducir tipos de vehículos mediante **Factory Method**.
+3. Implementar **State** para las transiciones de luces y **Observer** para publicar eventos.
+4. Incorporar peatones y una representación 2D con SFML.
 
-Siguiente iteracion: modelar dos ejes que no tengan luz verde simultaneamente;
-separar vehiculos por herencia y Factory Method; migrar el control del semaforo a
-State; permitir eventos de Observer; despues visualizar en SFML 3.
-
-El documento `docs/diseno_inicial.md` explica la organizacion prevista del
-sistema y distingue las clases implementadas de las que aun faltan.
+Los patrones y la GUI son **trabajo pendiente**, no funciones ya implementadas.
+En `docs/diseno_inicial.md` se describe la arquitectura y las limitaciones.

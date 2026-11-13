@@ -72,6 +72,31 @@ int main() {
     espera.join();
     verificar(liberado.load(), "el semaforo no libero el paso en verde");
 
-    std::cout << "OK: 400 elementos sin duplicados ni perdidas; semaforo validado.\n";
+    // Una cola cerrada debe permitir consumir los elementos que quedaron pendientes.
+    ColaConcurrente<int> colaPendiente;
+    verificar(colaPendiente.agregar(11), "no se pudo agregar el primer pendiente");
+    verificar(colaPendiente.agregar(22), "no se pudo agregar el segundo pendiente");
+    colaPendiente.cerrar();
+    const auto primero = colaPendiente.extraer();
+    const auto segundo = colaPendiente.extraer();
+    verificar(primero.has_value() && *primero == 11, "se perdio el primer pendiente");
+    verificar(segundo.has_value() && *segundo == 22, "se perdio el segundo pendiente");
+    verificar(!colaPendiente.extraer().has_value(), "la cola cerrada no termino vacia");
+
+    // Cerrar debe despertar al consumidor incluso si no llegaron elementos.
+    ColaConcurrente<int> colaSinElementos;
+    std::atomic<bool> consumidorIniciado{false};
+    std::atomic<bool> consumidorFinalizado{false};
+    std::thread consumidorBloqueado([&] {
+        consumidorIniciado.store(true);
+        const auto resultado = colaSinElementos.extraer();
+        consumidorFinalizado.store(!resultado.has_value());
+    });
+    while (!consumidorIniciado.load()) std::this_thread::yield();
+    colaSinElementos.cerrar();
+    consumidorBloqueado.join();
+    verificar(consumidorFinalizado.load(), "el cierre no libero al consumidor");
+
+    std::cout << "OK: 400 elementos sin perdidas; cierre de cola y semaforo validados.\n";
 }
 

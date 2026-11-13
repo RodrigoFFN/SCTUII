@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(SimTrrafic VERSION 0.1.0 LANGUAGES CXX)
+project(SimTrrafic VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,5 +17,10 @@ if(BUILD_TESTING)
     target_include_directories(test_concurrencia PRIVATE include)
     target_link_libraries(test_concurrencia PRIVATE Threads::Threads)
     add_test(NAME concurrencia_basica COMMAND test_concurrencia)
+
+    add_executable(test_interseccion tests/test_interseccion.cpp)
+    target_include_directories(test_interseccion PRIVATE include)
+    target_link_libraries(test_interseccion PRIVATE Threads::Threads)
+    add_test(NAME interseccion_segura COMMAND test_interseccion)
 endif()
 

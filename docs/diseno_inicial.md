@@ -1,51 +1,76 @@
-# Diseño inicial de SimTrrafic
+# Diseño de SimTrrafic
 
 **Curso:** Tecnología de Objetos  
-**Etapa:** Primer avance (`v0.1.0`)
+**Etapa:** Segundo avance (`v0.2.0`)
 
-## Descripción
+## Objetivo
 
-El proyecto representará una intersección urbana mediante vehículos, carriles,
-peatones y semáforos. La aplicación final utilizará una interfaz gráfica 2D con
-SFML para mostrar la circulación y permitirá modificar algunas condiciones de
-la simulación.
+Simular una intersección urbana con vehículos, carriles y semáforos coordinados.
+El sistema final se proyecta con peatones y visualización 2D (SFML). Actualmente
+es una simulación funcional por consola.
 
-## Qué está implementado
+## Componentes implementados
 
-- `Vehiculo`: estructura que almacena un identificador y el tipo de vehículo.
-- `ColaConcurrente<T>`: cola genérica protegida con mutex y variable de condición.
-- `Semaforo`: controla los estados rojo y verde, y permite esperar una luz verde.
-- `main.cpp`: crea un generador, un controlador y un despachador en tres hilos;
-  simula el paso de ocho vehículos por **un único carril**.
-
-## Arquitectura propuesta para versiones posteriores
-
-| Componente | Responsabilidad prevista |
+| Componente | Responsabilidad actual |
 | --- | --- |
-| `Simulador` | Coordinar la actualización y el ciclo de vida de la simulación. |
-| `Interseccion` | Reunir carriles, semáforos y cruces peatonales. |
-| `Carril` | Gestionar una cola de vehículos en una dirección. |
-| `Vehiculo` y subclases | Representar distintos tipos de vehículos con herencia y polimorfismo. |
-| `Peaton` | Simular la espera y el cruce de peatones. |
-| `Semaforo` | Definir estados y reglas de transición. |
-| Vista SFML | Dibujar el escenario y responder a los controles del usuario. |
+| `Vehiculo` | Representa un vehículo con identificador y tipo. |
+| `ColaConcurrente<T>` | Mantiene una cola protegida y notifica a los consumidores. |
+| `Semaforo` | Guarda una luz roja o verde; permite esperar verde sin espera activa. |
+| `Interseccion` | Administra dos semáforos y evita verdes simultáneos. |
+| `main.cpp` | Crea productores, consumidores y controlador; recoge resultados. |
 
-Las clases de esta tabla **son propuestas**: en el primer avance aún no están
-programadas, salvo las versiones sencillas de `Vehiculo` y `Semaforo`.
+## Flujo concurrente
 
-## Patrones de diseño previstos
+```text
+Generador Norte-Sur --> Cola Norte-Sur --> Despachador Norte-Sur --+
+                                                                 |
+                                                      Interseccion
+                                                                 |
+Generador Este-Oeste --> Cola Este-Oeste --> Despachador Este-Oeste-+
+                                                                 ^
+                                                                 |
+                                                  Controlador de fases
+```
 
-- **Factory Method:** creación de distintos tipos de vehículos.
-- **State:** estados y transiciones del semáforo.
-- **Observer:** notificación de cambios de semáforo a entidades interesadas.
+- Cada generador produce seis vehículos y cierra su cola.
+- Cada despachador bloquea hasta obtener un vehículo y espera la luz verde.
+- El controlador alterna los ejes Norte-Sur y Este-Oeste e introduce un intervalo
+  con ambas luces rojas entre las fases.
+- `Interseccion::habilitar` realiza la transición bajo un `mutex` y primero
+  pone ambas luces en rojo. `estado()` permite una lectura consistente del par.
+- Se cuentan los vehículos atendidos para comprobar el fin de la simulación.
 
-Estos patrones se implementarán y comprobarán en entregas posteriores; en esta
-versión todavía no se presentan como funcionalidades terminadas.
+**Limitación importante:** se comprueba la autorización de entrada al cruce, pero
+no se sigue la ocupación del espacio por cada vehículo. Un vehículo autorizado
+puede terminar después del cambio de luz. La exclusión de luces verdes no es
+por sí sola una garantía de ausencia de colisiones físicas.
 
-## Pruebas previstas
+## Arquitectura prevista para siguientes avances
 
-La prueba actual verifica el uso simultáneo de una cola con cuatro productores
-y tres consumidores, además de la espera de un semáforo. Las siguientes pruebas
-deberán comprobar que dos sentidos conflictivos no reciban paso al mismo tiempo,
-que los hilos terminen limpiamente y que no se pierdan vehículos durante la
-simulación.
+| Componente | Responsabilidad futura |
+| --- | --- |
+| `Simulador` | Coordinar la inicialización y parada de hilos. |
+| `Carril` | Encapsular la cola de vehículos por dirección. |
+| `Vehiculo` y subclases | Diferenciar vehículos con herencia/polimorfismo. |
+| `Peaton` | Esperar turno y cruzar la intersección. |
+| Vista SFML | Dibujar el tráfico y responder a controles. |
+
+## Patrones de diseño pendientes
+
+- **Factory Method:** crear los distintos tipos de vehículos.
+- **State:** encapsular estados y transiciones de los semáforos.
+- **Observer:** notificar cambios a otras entidades y a la futura vista.
+
+**Todavía no se han implementado** estos tres patrones en su versión completa.
+
+## Pruebas
+
+- `tests/test_concurrencia.cpp`: cuatro productores y tres consumidores (400
+  elementos sin pérdidas o duplicados); drenaje y cierre de la cola; espera del
+  semáforo básico.
+- `tests/test_interseccion.cpp`: estado inicial rojo, alternancia de fases,
+  bloqueo del eje en rojo, notificación al ponerse verde, cambios concurrentes
+  y apagado de ambas luces.
+
+Próximas pruebas: finalización de hilos bajo cancelación, carga variable y
+seguridad de la ocupación física del cruce.
