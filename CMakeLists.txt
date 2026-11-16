@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(SimTrrafic VERSION 0.2.0 LANGUAGES CXX)
+project(SimTrrafic VERSION 0.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -7,9 +7,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Threads REQUIRED)
 
+add_library(simtrrafic_core src/Simulador.cpp)
+target_include_directories(simtrrafic_core PUBLIC include)
+target_link_libraries(simtrrafic_core PUBLIC Threads::Threads)
+
 add_executable(simtrrafic src/main.cpp)
-target_include_directories(simtrrafic PRIVATE include)
-target_link_libraries(simtrrafic PRIVATE Threads::Threads)
+target_link_libraries(simtrrafic PRIVATE simtrrafic_core)
 
 include(CTest)
 if(BUILD_TESTING)
@@ -23,4 +26,3 @@ if(BUILD_TESTING)
     target_link_libraries(test_interseccion PRIVATE Threads::Threads)
     add_test(NAME interseccion_segura COMMAND test_interseccion)
 endif()
-
