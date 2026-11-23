@@ -1,7 +1,7 @@
 # Diseño de SimTrrafic
 
 **Curso:** Tecnología de Objetos  
-**Etapa:** Segundo avance (`v0.2.0`)
+**Etapa:** Tercer avance (`v0.3.0`)
 
 ## Objetivo
 
@@ -17,28 +17,44 @@ es una simulación funcional por consola.
 | `ColaConcurrente<T>` | Mantiene una cola protegida y notifica a los consumidores. |
 | `Semaforo` | Guarda una luz roja o verde; permite esperar verde sin espera activa. |
 | `Interseccion` | Administra dos semáforos y evita verdes simultáneos. |
-| `main.cpp` | Crea productores, consumidores y controlador; recoge resultados. |
+| `Carril` | Encapsula la cola de vehículos de un eje y conoce su dirección. |
+| `Estadisticas` | Cuenta vehículos generados y atendidos por eje con contadores atómicos. |
+| `Simulador` | Crea los cinco hilos, coordina su arranque y parada y devuelve el resumen. |
+| `main.cpp` | Crea un `Simulador`, lo ejecuta y captura excepciones. |
 
 ## Flujo concurrente
 
 ```text
-Generador Norte-Sur --> Cola Norte-Sur --> Despachador Norte-Sur --+
-                                                                 |
-                                                      Interseccion
-                                                                 |
-Generador Este-Oeste --> Cola Este-Oeste --> Despachador Este-Oeste-+
-                                                                 ^
-                                                                 |
-                                                  Controlador de fases
+Generador Norte-Sur --> Carril Norte-Sur --> Despachador Norte-Sur --+
+                                                                    |
+                                                         Interseccion
+                                                                    |
+Generador Este-Oeste --> Carril Este-Oeste --> Despachador Este-Oeste-+
+                                                                    ^
+                                                                    |
+                                                     Controlador de fases
 ```
 
-- Cada generador produce seis vehículos y cierra su cola.
-- Cada despachador bloquea hasta obtener un vehículo y espera la luz verde.
+- Cada generador produce seis vehículos (los ids múltiplos de 3 son `Bus`) y cierra su carril.
+- Cada despachador bloquea hasta obtener un vehículo y espera la luz verde de su eje.
+  Cuando el carril está cerrado y vacío, la extracción devuelve `nullopt` y el despachador termina.
 - El controlador alterna los ejes Norte-Sur y Este-Oeste e introduce un intervalo
-  con ambas luces rojas entre las fases.
+  con ambas luces rojas entre las fases. El mensaje de cada cambio se imprime bajo
+  el mismo `mutex` de salida que el cambio de luz, de modo que el registro en consola
+  respeta el orden real de las fases.
 - `Interseccion::habilitar` realiza la transición bajo un `mutex` y primero
   pone ambas luces en rojo. `estado()` permite una lectura consistente del par.
-- Se cuentan los vehículos atendidos para comprobar el fin de la simulación.
+- El controlador termina cuando se han atendido todos los vehículos y apaga ambas luces.
+- `Estadisticas` usa `std::atomic` con `memory_order_relaxed`: son contadores
+  independientes y el resumen se lee después de unir (`join`) todos los hilos.
+
+### Arranque y parada de hilos
+
+`Simulador::ejecutar` crea los cinco hilos (dos generadores, dos despachadores y el
+controlador). Todos esperan una barrera (`std::promise<bool>` con `std::shared_future`)
+hasta que se hayan creado los cinco. Si la creación de alguno falla, se publica `false`,
+los demás hilos salen sin ejecutar su tarea, se hace `join` de todos y se relanza
+la excepción original. Con esto no queda ningún hilo sin unir.
 
 **Limitación importante:** se comprueba la autorización de entrada al cruce, pero
 no se sigue la ocupación del espacio por cada vehículo. Un vehículo autorizado
@@ -49,17 +65,15 @@ por sí sola una garantía de ausencia de colisiones físicas.
 
 | Componente | Responsabilidad futura |
 | --- | --- |
-| `Simulador` | Coordinar la inicialización y parada de hilos. |
-| `Carril` | Encapsular la cola de vehículos por dirección. |
-| `Vehiculo` y subclases | Diferenciar vehículos con herencia/polimorfismo. |
+| `Vehiculo` y subclases | Diferenciar vehículos con herencia/polimorfismo (`Auto`, `Bus`). |
 | `Peaton` | Esperar turno y cruzar la intersección. |
 | Vista SFML | Dibujar el tráfico y responder a controles. |
 
 ## Patrones de diseño pendientes
 
-- **Factory Method:** crear los distintos tipos de vehículos.
-- **State:** encapsular estados y transiciones de los semáforos.
-- **Observer:** notificar cambios a otras entidades y a la futura vista.
+- **Factory Method:** crear los distintos tipos de vehículos (hoy el tipo es una cadena).
+- **State:** encapsular estados y transiciones de los semáforos (hoy es un enumerado de dos luces).
+- **Observer:** notificar cambios a otras entidades y a la futura vista (hoy se imprime directamente en consola).
 
 **Todavía no se han implementado** estos tres patrones en su versión completa.
 
@@ -72,5 +86,8 @@ por sí sola una garantía de ausencia de colisiones físicas.
   bloqueo del eje en rojo, notificación al ponerse verde, cambios concurrentes
   y apagado de ambas luces.
 
-Próximas pruebas: finalización de hilos bajo cancelación, carga variable y
-seguridad de la ocupación física del cruce.
+Aún no hay pruebas propias para `Carril`, `Estadisticas` ni `Simulador`; solo se
+validan de forma indirecta con la ejecución completa (12 generados, 12 atendidos).
+
+Próximas pruebas: `Carril`, `Estadisticas` y `Simulador`, finalización de hilos
+bajo cancelación, carga variable y seguridad de la ocupación física del cruce.
