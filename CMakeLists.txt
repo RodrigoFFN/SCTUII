@@ -62,3 +62,10 @@ if(WIN32)
     target_link_libraries(simtrrafic_web PRIVATE ws2_32)
 endif()
 target_link_libraries(simtrrafic PRIVATE simtrrafic_web)
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(BUILD_TESTING AND Python3_Interpreter_FOUND)
+    add_test(NAME api_web_e2e
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_web_api.py $<TARGET_FILE:simtrrafic>)
+    set_tests_properties(api_web_e2e PROPERTIES TIMEOUT 20)
+endif()
