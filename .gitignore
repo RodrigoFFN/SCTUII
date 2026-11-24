@@ -1,10 +1,11 @@
 build/
+build-*/
+cmake-build-*/
 *.o
 *.obj
 *.exe
 simtrrafic
-test_concurrencia
+simtrrafic_qt
+.DS_Store
 .idea/
 .vscode/
-
-test_interseccion

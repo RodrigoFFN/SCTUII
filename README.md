@@ -1,12 +1,32 @@
 # SimTrrafic — Simulador concurrente de tráfico
 
-**Curso:** Tecnología de Objetos (TEO) · **Lenguaje:** C++17 · **Versión:** 1.0.0
+**Curso:** Tecnología de Objetos (TEO) · **Lenguaje:** C++17 · **Versión:** 1.1.0
 
-SimTrrafic simula una intersección de dos ejes, con vehículos, carriles y semáforos coordinados en **cinco hilos**. Esta versión incorpora una **interfaz gráfica web local** (abre el panel en tu navegador), configuración de parámetros, modo fijo/adaptativo, eventos en tiempo real, estadísticas y pruebas automatizadas.
+SimTrrafic simula una intersección de dos ejes, con vehículos, carriles y semáforos coordinados en **cinco hilos**. Esta versión incorpora una **aplicación de escritorio Qt 6 Widgets** y una **interfaz gráfica web local** (abre el panel en tu navegador), configuración de parámetros, modo fijo/adaptativo, eventos en tiempo real, estadísticas y pruebas automatizadas.
 
-> Se conserva la base de C++ del proyecto del equipo (`Carril`, `ColaConcurrente`, `Vehiculo`, `Semaforo`, `Interseccion`, `Estadisticas` y `Simulador`). No depende de Qt, SFML, npm ni de internet para ejecutar el panel.
+> Se conserva la base de C++ del proyecto del equipo (`Carril`, `ColaConcurrente`, `Vehiculo`, `Semaforo`, `Interseccion`, `Estadisticas` y `Simulador`). La consola y la interfaz web siguen funcionando **sin Qt**. La aplicación de escritorio requiere Qt 6 Widgets, pero no necesita npm ni internet.
 
-## Inicio rápido en CachyOS (Linux)
+## Inicio rápido con Qt 6 en CachyOS (Linux)
+
+```bash
+sudo pacman -S --needed base-devel cmake gcc qt6-base
+cmake -S . -B build-qt -DCMAKE_BUILD_TYPE=Debug -DBUILD_QT_GUI=ON
+cmake --build build-qt -j2
+ctest --test-dir build-qt --output-on-failure
+./build-qt/simtrrafic_qt
+```
+
+**Qt 6 muestra una ventana de escritorio**, no un navegador. Incluye controles de ejecución, escenarios, intersección animada esquemáticamente, semáforos y eventos reales. El modo web anterior sigue disponible con `./build-qt/simtrrafic --gui`.
+
+Para ejecutar una comprobación automática de apertura de ventana sin pantalla:
+
+```bash
+QT_QPA_PLATFORM=offscreen ./build-qt/simtrrafic_qt --smoke-test
+```
+
+Más detalles en [`docs/GUI_QT6.md`](docs/GUI_QT6.md).
+
+## Inicio rápido en CachyOS (Linux) — consola y panel web
 
 ```bash
 sudo pacman -S --needed cmake gcc python
@@ -104,6 +124,7 @@ SCTUII/
 ├── README.md
 ├── include/                # clases del dominio, configuracion, monitor y servidor
 ├── src/                    # Simulador.cpp, ServidorWeb.cpp y main.cpp
+├── gui/                    # interfaz de escritorio Qt 6 Widgets
 ├── web/                    # index.html, styles.css, app.js
 ├── tests/                  # pruebas unitarias y prueba HTTP end-to-end
 └── docs/                   # diseno, arquitectura y guia de exposicion
