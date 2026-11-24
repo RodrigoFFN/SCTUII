@@ -10,7 +10,7 @@
 #include <sstream>
 #include <string>
 
-// Proyeccion inmutable del estado de ejecucion que utiliza el navegador.
+// Estado protegido por mutex para publicar instantaneas JSON al navegador.
 class MonitorSimulacion {
 public:
     void iniciar(const ConfiguracionSimulacion& configuracion) {

@@ -1,3 +1,5 @@
+> Documento histórico del tercer avance (`v0.3.0`). Para la versión integrada y la GUI consulte `README.md` y `docs/AVANCE_FINAL.md`.
+
 # Diseño de SimTrrafic
 
 **Curso:** Tecnología de Objetos  
