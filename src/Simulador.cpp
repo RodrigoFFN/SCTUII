@@ -56,7 +56,6 @@ void Simulador::solicitarDetencion() const {
 }
 
 ResumenEstadisticas Simulador::ejecutar() const {
-    parar_.store(false);
     Carril carrilNS(Eje::NorteSur);
     Carril carrilEO(Eje::EsteOeste);
     auto interseccion = std::make_shared<Interseccion>();
