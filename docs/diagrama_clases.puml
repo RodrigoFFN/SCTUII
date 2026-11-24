@@ -1,0 +1,48 @@
+@startuml
+skinparam classAttributeIconSize 0
+class ConfiguracionSimulacion {
+  +vehiculosPorEje: int
+  +intervaloLlegadaMs: int
+  +duracionVerdeMs: int
+  +adaptativo: bool
+  +validar()
+}
+class Simulador {
+  -config_: ConfiguracionSimulacion
+  +ejecutar(): ResumenEstadisticas
+  +solicitarDetencion()
+}
+class Carril {
+  -eje_: Eje
+  +agregar(Vehiculo)
+  +extraer(): optional<Vehiculo>
+  +cerrar()
+}
+class "ColaConcurrente<Vehiculo>" as Cola
+class Interseccion {
+  +habilitar(Eje)
+  +cruzar(Eje, ms): bool
+  +detener()
+  +cancelar()
+}
+class Semaforo
+class Vehiculo
+class FabricaVehiculos
+class PoliticaSemaforo
+class Estadisticas
+class MonitorSimulacion
+class ServidorWeb
+
+Simulador *-- ConfiguracionSimulacion
+Simulador ..> Carril
+Simulador ..> Interseccion
+Simulador ..> Estadisticas
+Simulador ..> PoliticaSemaforo
+Simulador ..> FabricaVehiculos
+Simulador ..> MonitorSimulacion : callback de eventos
+Carril *-- Cola
+Cola o-- Vehiculo
+Interseccion *-- "2" Semaforo
+ServidorWeb *-- MonitorSimulacion
+ServidorWeb ..> Simulador
+@enduml
