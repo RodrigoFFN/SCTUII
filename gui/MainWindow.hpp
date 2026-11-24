@@ -46,6 +46,7 @@ private:
     QSpinBox* green_ = nullptr;
     QSpinBox* allRed_ = nullptr;
     QCheckBox* adaptive_ = nullptr;
+    QCheckBox* animate_ = nullptr;
     QPushButton* start_ = nullptr;
     QPushButton* stop_ = nullptr;
     QPushButton* reset_ = nullptr;

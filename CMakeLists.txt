@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(SimTrrafic VERSION 1.1.0 LANGUAGES CXX)
+project(SimTrrafic VERSION 1.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -90,4 +90,18 @@ if(BUILD_QT_GUI)
             TIMEOUT 15
         )
     endif()
+endif()
+
+# El modelo de animacion se verifica sin Qt (apto para CI sin escritorio).
+if(BUILD_TESTING)
+    add_executable(test_animacion tests/test_animacion.cpp)
+    target_include_directories(test_animacion PRIVATE gui)
+    add_test(NAME animacion_eventos COMMAND test_animacion)
+endif()
+
+# Validar que los coches se animan tras la reserva real de la interseccion.
+if(BUILD_TESTING)
+    add_executable(test_eventos_cruce tests/test_eventos_cruce.cpp)
+    target_link_libraries(test_eventos_cruce PRIVATE simtrrafic_core)
+    add_test(NAME eventos_cruce_reales COMMAND test_eventos_cruce)
 endif()

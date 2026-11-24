@@ -107,8 +107,14 @@ ResumenEstadisticas Simulador::ejecutar() const {
         while (!parar_.load()) {
             auto vehiculo = carril.extraer();
             if (!vehiculo) break;
-            if (!interseccion->cruzar(eje, std::chrono::milliseconds(config_.tiempoCruceMs)))
-                break;
+            // El evento se emite exactamente despues de reservar el cruce.
+            // Qt anima el vehiculo a partir de este instante real del motor.
+            if (!interseccion->cruzar(
+                    eje, std::chrono::milliseconds(config_.tiempoCruceMs), [&] {
+                        publicar("cruce_inicio", eje, vehiculo->id,
+                                 "[CRUCE] " + std::string(nombreEje(eje)) +
+                                 " | Vehiculo #" + std::to_string(vehiculo->id));
+                    })) break;
             const auto transcurridos = std::chrono::duration_cast<std::chrono::milliseconds>(
                 RelojSimulacion::now() - vehiculo->llegada).count();
             // El tiempo de cola se estima restando el tiempo de ocupacion.

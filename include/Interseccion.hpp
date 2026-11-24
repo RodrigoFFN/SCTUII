@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 #include <thread>
 
@@ -47,7 +48,8 @@ public:
 
     // Reserva atomica de la zona critica: solo un vehiculo cruza a la vez.
     // La transicion de fase espera a que este cruce finalice.
-    bool cruzar(Eje eje, std::chrono::milliseconds duracion) {
+    bool cruzar(Eje eje, std::chrono::milliseconds duracion,
+                const std::function<void()>& alEntrar = {}) {
         std::unique_lock<std::mutex> bloqueo(mutex_);
         disponible_.wait(bloqueo, [this, eje] {
             return cancelado_ || (!ocupado_ && luzDe(eje) == Luz::Verde);
@@ -55,7 +57,21 @@ public:
         if (cancelado_) return false;
         ocupado_ = true;
         bloqueo.unlock();
-        std::this_thread::sleep_for(duracion);
+
+        // Avisar despues de reservar la zona critica, nunca con el mutex tomado.
+        // El observador puede adquirir el estado de esta interseccion sin bloquearse.
+        try {
+            if (alEntrar) alEntrar();
+            std::this_thread::sleep_for(duracion);
+        } catch (...) {
+            // Incluso si falla un observador, la interseccion no queda ocupada.
+            bloqueo.lock();
+            ocupado_ = false;
+            bloqueo.unlock();
+            disponible_.notify_all();
+            throw;
+        }
+
         bloqueo.lock();
         ocupado_ = false;
         bloqueo.unlock();

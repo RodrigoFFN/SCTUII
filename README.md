@@ -1,137 +1,168 @@
-# SimTrrafic — Simulador concurrente de tráfico
+# SimTrrafic
 
-**Curso:** Tecnología de Objetos (TEO) · **Lenguaje:** C++17 · **Versión:** 1.1.0
+**Simulador concurrente de tráfico urbano**  
+Tecnología de Objetos · C++17 · Qt 6
 
-SimTrrafic simula una intersección de dos ejes, con vehículos, carriles y semáforos coordinados en **cinco hilos**. Esta versión incorpora una **aplicación de escritorio Qt 6 Widgets** y una **interfaz gráfica web local** (abre el panel en tu navegador), configuración de parámetros, modo fijo/adaptativo, eventos en tiempo real, estadísticas y pruebas automatizadas.
+SimTrrafic simula el tránsito de vehículos en una intersección con dos ejes: Norte–Sur y Este–Oeste. La generación de vehículos, las colas de espera y el control de semáforos se ejecutan de forma concurrente.
 
-> Se conserva la base de C++ del proyecto del equipo (`Carril`, `ColaConcurrente`, `Vehiculo`, `Semaforo`, `Interseccion`, `Estadisticas` y `Simulador`). La consola y la interfaz web siguen funcionando **sin Qt**. La aplicación de escritorio requiere Qt 6 Widgets, pero no necesita npm ni internet.
+El mismo motor de simulación se utiliza en la aplicación de escritorio desarrollada con Qt 6, el panel web local y la versión de consola.
 
-## Inicio rápido con Qt 6 en CachyOS (Linux)
+## Funcionalidades
+
+- Generación de autos y buses en ambos ejes.
+- Colas concurrentes para gestionar los vehículos en espera.
+- Semáforos con ciclos fijos o ajuste adaptativo según la cantidad de vehículos pendientes.
+- Fase de seguridad con ambos semáforos en rojo y control de acceso a la zona de cruce.
+- Configuración de cantidad de vehículos y tiempos de llegada, cruce y semáforos.
+- Estadísticas de vehículos generados, atendidos y pendientes, además de tiempos de espera estimados.
+- Interfaz Qt 6 con vehículos animados, estado de los semáforos, controles y registro de eventos.
+- Panel web local y ejecución por consola.
+- Pruebas automatizadas con CTest.
+
+## Requisitos
+
+- Compilador compatible con **C++17** (GCC, Clang o MSVC).
+- **CMake 3.16** o superior.
+- **Qt 6.2** o superior, con el módulo Widgets, para la aplicación de escritorio.
+- **Python 3** para la prueba automatizada de la API web (opcional).
+
+El motor, la consola y el panel web no requieren Qt. La compilación se realiza con CMake en Windows, Linux o macOS, siempre que las dependencias estén instaladas.
+
+## Compilación y ejecución
+
+### Interfaz de escritorio (Qt 6)
+
+Desde la carpeta del proyecto:
 
 ```bash
-sudo pacman -S --needed base-devel cmake gcc qt6-base
-cmake -S . -B build-qt -DCMAKE_BUILD_TYPE=Debug -DBUILD_QT_GUI=ON
-cmake --build build-qt -j2
-ctest --test-dir build-qt --output-on-failure
+cmake -S . -B build-qt -DBUILD_QT_GUI=ON
+cmake --build build-qt --config Release --parallel
+```
+
+Si CMake no detecta Qt, se puede indicar su instalación mediante `CMAKE_PREFIX_PATH`:
+
+```bash
+cmake -S . -B build-qt -DBUILD_QT_GUI=ON -DCMAKE_PREFIX_PATH="RUTA_DE_QT"
+```
+
+Ejecutar en Linux o macOS con un generador de una sola configuración:
+
+```bash
 ./build-qt/simtrrafic_qt
 ```
 
-**Qt 6 muestra una ventana de escritorio**, no un navegador. Incluye controles de ejecución, escenarios, intersección animada esquemáticamente, semáforos y eventos reales. El modo web anterior sigue disponible con `./build-qt/simtrrafic --gui`.
+En Windows con un generador de varias configuraciones, por ejemplo Visual Studio:
 
-Para ejecutar una comprobación automática de apertura de ventana sin pantalla:
-
-```bash
-QT_QPA_PLATFORM=offscreen ./build-qt/simtrrafic_qt --smoke-test
+```powershell
+.\build-qt\Release\simtrrafic_qt.exe
 ```
 
-Más detalles en [`docs/GUI_QT6.md`](docs/GUI_QT6.md).
+La ubicación del ejecutable depende del generador de CMake utilizado.
 
-## Inicio rápido en CachyOS (Linux) — consola y panel web
+### Consola y panel web
 
 ```bash
-sudo pacman -S --needed cmake gcc python
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build -j2
-ctest --test-dir build --output-on-failure
+cmake -S . -B build
+cmake --build build --config Release --parallel
+```
+
+Iniciar la simulación por consola:
+
+```bash
+./build/simtrrafic
+```
+
+Iniciar el panel web:
+
+```bash
 ./build/simtrrafic --gui
 ```
 
-**Abre <http://127.0.0.1:8080> en Firefox, Chromium o cualquier navegador moderno.** El servidor se limita a la interfaz loopback de este equipo; no acepta conexiones de otros dispositivos. Para terminarlo, pulsa `Ctrl+C` en la terminal.
-
-Si el puerto está ocupado:
+Abrir [http://127.0.0.1:8080](http://127.0.0.1:8080) en el navegador. Para utilizar otro puerto:
 
 ```bash
 ./build/simtrrafic --gui --port 8081
 ```
 
-En Windows (MSVC o MSYS2 UCRT64), compila con CMake y ejecuta `simtrrafic.exe --gui`; la ubicación puede ser `build/Debug/`. El servicio HTTP utiliza Winsock en Windows. La validación automatizada de esta entrega se realizó en Linux.
+En Windows, utiliza el ejecutable `simtrrafic.exe` generado por CMake; con Visual Studio suele estar en `build\Release\`.
 
-## Qué puedes hacer en la interfaz
+## Parámetros de la simulación
 
-1. **Iniciar, detener y reiniciar** una simulación.
-2. Elegir escenario rápido: **flujo bajo, normal u hora punta**.
-3. Configurar vehículos por eje, intervalo de llegadas, tiempo de cruce, fase verde y transición todo rojo.
-4. Cambiar entre **ciclo fijo** y **estrategia adaptativa** (ajuste heurístico a partir de la cantidad pendiente en cada eje).
-5. Observar estados de semáforos, vehículos en cola aproximados, contadores por eje, tiempo de espera medio y bitácora.
-6. Mostrar gráficamente la evolución de vehículos atendidos, con actualización periódica desde C++.
+| Parámetro | Descripción | Predeterminado |
+| --- | --- | ---: |
+| `--vehiculos N` | Vehículos por eje | 6 |
+| `--llegada-ms N` | Intervalo entre llegadas | 90 ms |
+| `--cruce-ms N` | Tiempo de cruce por vehículo | 130 ms |
+| `--verde-ms N` | Duración base de la luz verde | 1000 ms |
+| `--rojo-ms N` | Duración de la fase con ambos semáforos en rojo | 220 ms |
+| `--adaptativo` | Ajuste del verde según la demanda | Desactivado |
+| `--fijo` | Ciclo semafórico de duración fija | Activado |
+| `--help` | Lista de opciones disponibles | — |
 
-La representación vial es **ilustrativa**: no reproduce trayectorias físicas ni una ciudad real. El motor sí impide que dos vehículos ocupen simultáneamente su zona crítica simulada, y exige un tiempo de despeje antes de autorizar la siguiente fase.
-
-## Consola (sin interfaz)
+Ejemplos:
 
 ```bash
-./build/simtrrafic
-./build/simtrrafic --vehiculos 10 --llegada-ms 70 --cruce-ms 120 --verde-ms 900 --rojo-ms 200
+./build/simtrrafic --vehiculos 10 --verde-ms 1500
 ./build/simtrrafic --vehiculos 12 --adaptativo
-./build/simtrrafic --help
 ```
 
-### Valores y límites
-
-| Opción | Predeterminado | Valores admitidos |
-| --- | ---: | ---: |
-| `--vehiculos` | 6 por eje | 1–60 |
-| `--llegada-ms` | 90 | 10–5000 ms |
-| `--cruce-ms` | 130 | 20–5000 ms |
-| `--verde-ms` | 1000 | 100–10000 ms |
-| `--rojo-ms` | 220 | 20–5000 ms |
-| `--adaptativo` / `--fijo` | fijo | dos estrategias |
-| `--gui` | desactivado | interfaz en navegador |
-| `--port` | 8080 | 1024–65535 (con `--gui`) |
-
-En modo adaptativo la duración cambia en función de la diferencia de vehículos pendientes entre ambos ejes, dentro de un rango acotado. **Es una regla heurística educativa, no un algoritmo de IA entrenado ni un sistema para semáforos reales.**
-
-## Arquitectura de objetos
-
-| Clase o módulo | Responsabilidad |
-| --- | --- |
-| `Vehiculo` + `FabricaVehiculos` | Representar y construir autos y buses. |
-| `ColaConcurrente<T>` + `Carril` | Almacenar vehículos de forma segura entre hilos. |
-| `Semaforo` + `Interseccion` | Sincronizar luces y reservar la zona crítica de cruce. |
-| `PoliticaSemaforo` | Calcular duración de fase en modo fijo o adaptativo. |
-| `ConfiguracionSimulacion` | Encapsular y validar los parámetros de ejecución. |
-| `Estadisticas` | Registrar contadores y espera aproximada con operaciones atómicas. |
-| `Simulador` | Coordinar generadores, despachadores, controlador, parada y eventos. |
-| `Eventos` + `MonitorSimulacion` | Desacoplar el motor de los consumidores de información, producir instantáneas JSON. |
-| `ServidorWeb` | Exponer el panel y la API HTTP **solo en localhost**. |
-| `web/` | Vista HTML/CSS/JS que consulta el estado y envía acciones. |
-
-El sistema utiliza una **fábrica estática** para tipos de vehículos y una **interfaz de observador** mediante callback; no se afirma que implemente las versiones completas de Factory Method, State u Observer de GoF.
-
-## Concurrencia y seguridad
-
-- Se lanzan cinco hilos: generador NS, generador EO, despachador NS, despachador EO y controlador de semáforos.
-- Las colas utilizan `std::mutex`, `std::condition_variable` y un protocolo de cierre.
-- La intersección pone ambos semáforos en rojo antes de activar un eje; **espera a que el cruce previo quede desocupado**.
-- Para permitir detener una ejecución, el motor notifica a los hilos, cancela esperas, cierra las colas y hace `join`.
-- Los contadores son atómicos y las instantáneas del panel están protegidas con `mutex`.
-
-## Pruebas
-
-```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build -j2
-ctest --test-dir build --output-on-failure
-```
-
-La suite incluye pruebas de colas, intersección, validación, fábrica, exclusión del cruce, política adaptativa, integración del simulador, monitor JSON y API HTTP local. La prueba HTTP requiere Python 3: CMake la registra solo cuando encuentra el intérprete.
+En la aplicación Qt, estos valores también pueden modificarse desde el panel de configuración antes de iniciar la simulación.
 
 ## Estructura del proyecto
 
 ```text
 SCTUII/
+├── include/          # Clases y estructuras del simulador
+├── src/              # Motor, consola y servidor web
+├── gui/              # Interfaz de escritorio Qt 6
+├── web/              # Interfaz web (HTML, CSS y JavaScript)
+├── tests/            # Pruebas automatizadas
+├── docs/             # Documentación técnica
 ├── CMakeLists.txt
-├── README.md
-├── include/                # clases del dominio, configuracion, monitor y servidor
-├── src/                    # Simulador.cpp, ServidorWeb.cpp y main.cpp
-├── gui/                    # interfaz de escritorio Qt 6 Widgets
-├── web/                    # index.html, styles.css, app.js
-├── tests/                  # pruebas unitarias y prueba HTTP end-to-end
-└── docs/                   # diseno, arquitectura y guia de exposicion
+└── README.md
 ```
 
-## Alcance y límites
+### Componentes principales
 
-La versión implementa una **intersección bidireccional simplificada**. No tiene peatones, múltiples intersecciones, mapas geográficos, vehículos con dinámica física, semáforos amarillos ni decisiones con aprendizaje automático. Las esperas son **estimaciones de simulación**, no mediciones del mundo real. La vista muestra vehículos agregados por eje y anima cruces de forma esquemática.
+| Componente | Función |
+| --- | --- |
+| `Vehiculo`, `FabricaVehiculos` | Representación y creación de vehículos. |
+| `ColaConcurrente`, `Carril` | Gestión de vehículos pendientes en cada eje. |
+| `Semaforo`, `Interseccion` | Control de luces y exclusión mutua del cruce. |
+| `ConfiguracionSimulacion` | Parámetros y validación de entradas. |
+| `PoliticaSemaforo` | Duración de fases fijas o adaptativas. |
+| `Estadisticas` | Registro de vehículos y tiempos de espera. |
+| `Simulador` | Coordinación de hilos y ejecución. |
+| `Eventos`, `MonitorSimulacion` | Publicación y consulta del estado de la simulación. |
+| `ServidorWeb` | Servidor HTTP para el panel local. |
 
-Consulta `docs/AVANCE_FINAL.md` para ver la división por tareas y la demostración sugerida, y `docs/API_WEB.md` para las rutas de la interfaz.
+La simulación trabaja con dos generadores de vehículos, dos despachadores y un hilo de control de semáforos. Se utilizan `std::thread`, `std::mutex`, `std::condition_variable` y operaciones atómicas para coordinar el acceso a los datos compartidos.
+
+## Pruebas
+
+Para compilar y ejecutar las pruebas:
+
+```bash
+cmake -S . -B build -DBUILD_TESTING=ON
+cmake --build build --config Release --parallel
+ctest --test-dir build -C Release --output-on-failure
+```
+
+Para incluir las pruebas de la aplicación Qt:
+
+```bash
+cmake -S . -B build-qt -DBUILD_QT_GUI=ON -DBUILD_TESTING=ON
+cmake --build build-qt --config Release --parallel
+ctest --test-dir build-qt -C Release --output-on-failure
+```
+
+## Documentación
+
+- [Diseño inicial](docs/diseno_inicial.md)
+- [Interfaz Qt 6](docs/GUI_QT6.md)
+- [API y panel web](docs/API_WEB.md)
+- [Diagrama de clases](docs/diagrama_clases.puml)
+
+## Alcance
+
+La simulación representa una intersección simplificada. Los vehículos de la interfaz se animan a partir de eventos del motor; no se calcula movimiento físico real. La política adaptativa ajusta las fases según la demanda observada, sin utilizar un modelo de aprendizaje automático.

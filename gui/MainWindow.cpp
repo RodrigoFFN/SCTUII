@@ -18,6 +18,7 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QSaveFile>
+#include <QSignalBlocker>
 #include <QScrollArea>
 #include <QSpinBox>
 #include <QTextStream>
@@ -41,7 +42,7 @@ QFrame* panel(QWidget* parent = nullptr) {
 QLabel* textLabel(const QString& value, const QString& role = "small") {
     auto* label = new QLabel(value);
     label->setObjectName(role);
-    label->setWordWrap(true);
+    label->setWordWrap(role == "small" || role == "subtitle" || role == "statTitle");
     return label;
 }
 
@@ -56,7 +57,7 @@ QWidget* field(const QString& title, QSpinBox*& control, int lo, int hi,
     control->setRange(lo, hi);
     control->setValue(value);
     control->setSuffix(suffix);
-    control->setButtonSymbols(QAbstractSpinBox::PlusMinus);
+    control->setButtonSymbols(QAbstractSpinBox::UpDownArrows);
     control->setMinimumHeight(35);
     lay->addWidget(control);
     return wrap;
@@ -82,8 +83,8 @@ QString csvQuote(QString t) {
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("SimTrrafic | Centro de control Qt 6");
-    resize(1450, 900);
-    setMinimumSize(1060, 710);
+    resize(1460, 870);
+    setMinimumSize(1020, 710);
     buildUi();
     ticker_ = new QTimer(this);
     ticker_->setInterval(75);
@@ -100,32 +101,55 @@ MainWindow::~MainWindow() {
 
 void MainWindow::buildUi() {
     setStyleSheet(R"QSS(
-        QMainWindow, QScrollArea, QWidget#root { background: #0c1525; color: #e5edfa; }
-        QLabel { color: #e5edfa; font-family: 'DejaVu Sans'; }
-        QLabel#brand { font-size: 26px; font-weight: 800; color: #f2f7ff; }
-        QLabel#subtitle { font-size: 12px; color: #92a8be; }
-        QLabel#panelTitle { font-size: 15px; font-weight: 700; }
-        QLabel#fieldLabel, QLabel#small, QLabel#statTitle { font-size: 11px; color: #a2b3c8; }
-        QLabel#statValue { font-size: 23px; font-weight: 800; color: #eaf3ff; }
-        QLabel#phase { background: #182d3e; color: #63e4ae; border-radius: 9px; padding: 10px; font-weight: bold; }
-        QLabel#state { background: #1b2840; color: #b2c9e5; border-radius: 9px; padding: 9px; font-weight: 700; }
-        QFrame#panel { background: #152238; border: 1px solid #283a55; border-radius: 16px; }
-        QFrame#statCard { background: #1c2d46; border-radius: 10px; border: 1px solid #2d4260; }
-        QSpinBox, QComboBox { background: #0f1b2f; color: #e5edfa; border: 1px solid #3c5270; border-radius: 7px; padding: 5px 9px; }
-        QComboBox::drop-down { border: 0; width: 20px; }
-        QCheckBox { color: #e5edfa; spacing: 8px; }
+        QMainWindow, QScrollArea, QWidget#root { background: #0b1525; color: #e8f3ff; }
+        QLabel { color: #e8f3ff; font-family: 'DejaVu Sans'; }
+        QLabel#brand { font-size: 23px; font-weight: 800; color: #effaff; }
+        QLabel#subtitle { font-size: 11px; color: #94abc4; }
+        QLabel#panelTitle { font-size: 15px; font-weight: 800; }
+        QLabel#fieldLabel, QLabel#small, QLabel#statTitle { font-size: 11px; color: #9eb2cb; }
+        QLabel#statValue { font-size: 24px; font-weight: 800; color: #eff9ff; }
+        QLabel#phase { background: #193342; color: #64ebbb; border-radius: 8px;
+                       padding: 9px; font-weight: 700; }
+        QLabel#state { background: #1d3544; color: #7cecc6; border: 1px solid #2b5960;
+                       border-radius: 14px; padding: 8px 13px; font-weight: 700; }
+        QFrame#panel { background: #15243a; border: 1px solid #2b3f58; border-radius: 15px; }
+        QFrame#statCard { background: #1b304c; border-radius: 10px;
+                          border: 1px solid #334d69; }
+        QSpinBox, QComboBox { background: #0f1e32; color: #e9f4ff;
+                             border: 1px solid #415a76; border-radius: 8px;
+                             padding: 6px 34px 6px 10px; selection-background-color: #247e82; }
+        QSpinBox:focus, QComboBox:focus { border: 1px solid #43d3b5; }
+        QSpinBox::up-button, QSpinBox::down-button {
+            subcontrol-origin: border; width: 25px; background: #253b57;
+            border-left: 1px solid #3d5570;
+        }
+        QSpinBox::up-button { subcontrol-position: top right;
+                             border-top-right-radius: 7px; }
+        QSpinBox::down-button { subcontrol-position: bottom right;
+                               border-bottom-right-radius: 7px; }
+        QComboBox::drop-down { border: 0; width: 27px; }
+        QCheckBox { color: #e8f3ff; spacing: 8px; }
         QCheckBox::indicator { width: 16px; height: 16px; }
-        QPushButton { background: #273c59; color: #eaf3ff; border: 1px solid #385473; border-radius: 9px; padding: 10px; font-weight: 700; }
-        QPushButton:hover { background: #375577; }
-        QPushButton:disabled { background: #1b293a; color: #667b93; border-color: #24354a; }
-        QPushButton#primary { background: #20b982; color: #071e1b; border: none; }
-        QPushButton#primary:hover { background: #54dbab; }
-        QPushButton#danger { background: #744157; color: #fff3f5; border: none; }
-        QPlainTextEdit { background: #0d1a2d; color: #c9daf0; border: 1px solid #2e4360; border-radius: 10px; padding: 8px; font-size: 11px; }
-        QProgressBar { background: #0d1a2d; border-radius: 7px; min-height: 17px; border: 1px solid #30415a; text-align: center; color: #e6effa; }
-        QProgressBar::chunk { background: #29c59b; border-radius: 6px; }
-        QScrollBar:vertical { background: #0f1b2e; width: 9px; }
-        QScrollBar::handle:vertical { background: #47607e; border-radius: 4px; }
+        QPushButton { background: #263e5d; color: #e9f3ff;
+                      border: 1px solid #406083; border-radius: 9px;
+                      padding: 9px; font-weight: 700; min-height: 21px; }
+        QPushButton:hover { background: #33577b; }
+        QPushButton:disabled { background: #1a2b3d; color: #6d8199;
+                               border-color: #293d55; }
+        QPushButton#primary { background: #2bcca1; color: #092c27; border: none; }
+        QPushButton#primary:hover { background: #65eac0; }
+        QPushButton#danger { background: #71445d; color: #fff0f4; border: none; }
+        QPushButton#danger:hover { background: #96546b; }
+        QPlainTextEdit { background: #0c192c; color: #c9dcef;
+                         border: 1px solid #344b67; border-radius: 9px;
+                         padding: 8px; font-size: 11px;
+                         font-family: 'DejaVu Sans Mono'; }
+        QProgressBar { background: #0d1e31; border: 1px solid #2e4962;
+                       min-height: 17px; border-radius: 8px;
+                       text-align: center; color: #effcff; }
+        QProgressBar::chunk { background: #2ccea9; border-radius: 7px; }
+        QScrollBar:vertical { background: #112037; width: 9px; }
+        QScrollBar::handle:vertical { background: #4a6583; border-radius: 4px; }
     )QSS");
 
     auto* scroll = new QScrollArea;
@@ -133,47 +157,51 @@ void MainWindow::buildUi() {
     scroll->setFrameShape(QFrame::NoFrame);
     auto* root = new QWidget;
     root->setObjectName("root");
-    root->setMinimumWidth(1140);
+    root->setMinimumWidth(1090);
     auto* outer = new QVBoxLayout(root);
-    outer->setContentsMargins(22, 21, 22, 22);
-    outer->setSpacing(18);
+    outer->setContentsMargins(17, 14, 17, 15);
+    outer->setSpacing(11);
 
     auto* heading = new QHBoxLayout;
     auto* headingText = new QVBoxLayout;
     headingText->setSpacing(3);
-    headingText->addWidget(textLabel("SIMTRRAFIC  /  QT 6", "brand"));
-    headingText->addWidget(textLabel("Panel de simulación concurrente de tráfico • escritorio", "subtitle"));
+    headingText->addWidget(textLabel("SIMTRRAFIC   /   CENTRO DE CONTROL", "brand"));
+    headingText->addWidget(textLabel("Intersección inteligente · simulación concurrente · motor C++17 + Qt 6", "subtitle"));
     heading->addLayout(headingText, 1);
     state_ = textLabel("LISTO PARA INICIAR", "state");
     state_->setAlignment(Qt::AlignCenter);
-    state_->setMinimumWidth(160);
+    state_->setMinimumWidth(150);
     heading->addWidget(state_);
     outer->addLayout(heading);
 
     auto* columns = new QHBoxLayout;
-    columns->setSpacing(14);
+    columns->setSpacing(12);
     outer->addLayout(columns, 1);
 
     // Configuracion, margen izquierdo.
     auto* settings = panel();
-    settings->setFixedWidth(260);
+    settings->setFixedWidth(248);
     auto* left = new QVBoxLayout(settings);
-    left->setContentsMargins(16, 18, 16, 18);
-    left->setSpacing(12);
+    left->setContentsMargins(15, 15, 15, 15);
+    left->setSpacing(9);
     left->addWidget(textLabel("Configuración", "panelTitle"));
     left->addWidget(textLabel("Escenario", "fieldLabel"));
     preset_ = new QComboBox;
     preset_->addItems({"Normal", "Tráfico ligero", "Hora punta", "Personalizado"});
     preset_->setMinimumHeight(36);
     left->addWidget(preset_);
-    left->addWidget(field("Vehículos por eje", vehicles_, 1, 60, 6));
-    left->addWidget(field("Intervalo de llegada", arrival_, 10, 5000, 90, " ms"));
-    left->addWidget(field("Tiempo de cruce", crossing_, 20, 5000, 130, " ms"));
-    left->addWidget(field("Semáforo verde", green_, 100, 10000, 1000, " ms"));
-    left->addWidget(field("Ambos en rojo", allRed_, 20, 5000, 220, " ms"));
+    left->addWidget(field("Vehículos por eje", vehicles_, 1, 60, 8));
+    left->addWidget(field("Intervalo de llegada", arrival_, 10, 5000, 180, " ms"));
+    left->addWidget(field("Tiempo de cruce", crossing_, 20, 5000, 420, " ms"));
+    left->addWidget(field("Semáforo verde", green_, 100, 10000, 1800, " ms"));
+    left->addWidget(field("Ambos en rojo", allRed_, 20, 5000, 180, " ms"));
     adaptive_ = new QCheckBox("Semáforos adaptativos");
     left->addWidget(adaptive_);
-    left->addSpacing(6);
+    animate_ = new QCheckBox("Animación fluida (60 FPS)");
+    animate_->setChecked(true);
+    animate_->setToolTip("La animación interpola el movimiento entre eventos reales del motor.");
+    left->addWidget(animate_);
+    left->addSpacing(3);
     start_ = new QPushButton("▶  Iniciar simulación");
     start_->setObjectName("primary");
     left->addWidget(start_);
@@ -183,29 +211,31 @@ void MainWindow::buildUi() {
     reset_ = new QPushButton("↻  Reiniciar panel");
     left->addWidget(reset_);
     left->addStretch(1);
-    left->addWidget(textLabel("Los parámetros se aplican al iniciar una nueva ejecución.", "small"));
+    left->addWidget(textLabel("La configuración se aplica en la próxima ejecución. Los coches siguen eventos reales.", "small"));
     columns->addWidget(settings);
 
     // Simulacion y eventos.
     auto* center = new QVBoxLayout;
-    center->setSpacing(13);
+    center->setSpacing(11);
     columns->addLayout(center, 1);
     auto* scenePanel = panel();
     auto* scene = new QVBoxLayout(scenePanel);
-    scene->setContentsMargins(15, 14, 15, 14);
+    scene->setContentsMargins(12, 12, 12, 12);
     scene->setSpacing(10);
     auto* sceneHead = new QHBoxLayout;
-    sceneHead->addWidget(textLabel("Intersección N/S ↕ E/O", "panelTitle"));
+    sceneHead->addWidget(textLabel("Mapa de la intersección", "panelTitle"));
     sceneHead->addStretch();
+    sceneHead->addWidget(textLabel("●  ANIMACIÓN EN VIVO", "small"));
     runtime_ = textLabel("00:00", "small");
     sceneHead->addWidget(runtime_);
     scene->addLayout(sceneHead);
     canvas_ = new TrafficCanvas;
     scene->addWidget(canvas_, 1);
+    scene->addWidget(textLabel("N/S: de norte a sur    ·    E/O: de oeste a este    ·    Autos y buses a escala visual", "small"));
     phase_ = textLabel("Semáforos en rojo", "phase");
     phase_->setAlignment(Qt::AlignCenter);
     scene->addWidget(phase_);
-    center->addWidget(scenePanel, 4);
+    center->addWidget(scenePanel, 5);
 
     auto* logPanel = panel();
     auto* logLayout = new QVBoxLayout(logPanel);
@@ -218,16 +248,16 @@ void MainWindow::buildUi() {
     logLayout->addLayout(logHead);
     events_ = new QPlainTextEdit;
     events_->setReadOnly(true);
-    events_->setMinimumHeight(140);
+    events_->setMinimumHeight(118);
     logLayout->addWidget(events_);
     center->addWidget(logPanel, 2);
 
     // Estadisticas, margen derecho.
     auto* statsPanel = panel();
-    statsPanel->setFixedWidth(235);
+    statsPanel->setFixedWidth(234);
     auto* right = new QVBoxLayout(statsPanel);
-    right->setContentsMargins(13, 16, 13, 16);
-    right->setSpacing(10);
+    right->setContentsMargins(12, 14, 12, 14);
+    right->setSpacing(9);
     right->addWidget(textLabel("Estadísticas", "panelTitle"));
     right->addWidget(statCard("Vehículos generados", generated_));
     right->addWidget(statCard("Vehículos atendidos", served_));
@@ -246,7 +276,7 @@ void MainWindow::buildUi() {
     eoProgress_ = new QProgressBar;
     right->addWidget(eoProgress_);
     right->addStretch(1);
-    right->addWidget(textLabel("Los vehículos dibujados son esquemáticos; las cifras provienen del motor concurrente de C++.", "small"));
+    right->addWidget(textLabel("Vehículos animados con eventos del motor real. Las posiciones del mapa son ilustrativas.", "small"));
     columns->addWidget(statsPanel);
 
     scroll->setWidget(root);
@@ -257,23 +287,49 @@ void MainWindow::buildUi() {
     connect(stop_, &QPushButton::clicked, this, [this] { stopSimulation(); });
     connect(reset_, &QPushButton::clicked, this, [this] { resetView(); });
     connect(export_, &QPushButton::clicked, this, [this] { exportCsv(); });
+    connect(animate_, &QCheckBox::toggled, this,
+            [this](bool checked) { canvas_->setAnimationsEnabled(checked); });
+    auto personalizado = [this] {
+        if (preset_->currentIndex() == 3) return;
+        const QSignalBlocker bloqueo(preset_);
+        preset_->setCurrentIndex(3);
+    };
+    for (QSpinBox* control : {vehicles_, arrival_, crossing_, green_, allRed_}) {
+        connect(control, QOverload<int>::of(&QSpinBox::valueChanged), this,
+                [personalizado](int) { personalizado(); });
+    }
+    connect(adaptive_, &QCheckBox::toggled, this,
+            [personalizado](bool) { personalizado(); });
 }
 
 void MainWindow::applyPreset(int index) {
     if (index == 3) return;
+    const QSignalBlocker b1(vehicles_);
+    const QSignalBlocker b2(arrival_);
+    const QSignalBlocker b3(crossing_);
+    const QSignalBlocker b4(green_);
+    const QSignalBlocker b5(allRed_);
+    const QSignalBlocker b6(adaptive_);
     ConfiguracionSimulacion c;
-    if (index == 1) {
-        c.vehiculosPorEje = 3;
-        c.intervaloLlegadaMs = 250;
-        c.tiempoCruceMs = 110;
-        c.duracionVerdeMs = 1000;
-        c.duracionTodoRojoMs = 220;
+    if (index == 0) {
+        // Escenario de demostracion: se distinguen claramente los cruces.
+        c.vehiculosPorEje = 8;
+        c.intervaloLlegadaMs = 180;
+        c.tiempoCruceMs = 420;
+        c.duracionVerdeMs = 1800;
+        c.duracionTodoRojoMs = 180;
+    } else if (index == 1) {
+        c.vehiculosPorEje = 4;
+        c.intervaloLlegadaMs = 230;
+        c.tiempoCruceMs = 340;
+        c.duracionVerdeMs = 1700;
+        c.duracionTodoRojoMs = 180;
     } else if (index == 2) {
         c.vehiculosPorEje = 22;
-        c.intervaloLlegadaMs = 35;
-        c.tiempoCruceMs = 155;
-        c.duracionVerdeMs = 1150;
-        c.duracionTodoRojoMs = 240;
+        c.intervaloLlegadaMs = 65;
+        c.tiempoCruceMs = 390;
+        c.duracionVerdeMs = 2200;
+        c.duracionTodoRojoMs = 200;
         c.adaptativo = true;
     }
     vehicles_->setValue(c.vehiculosPorEje);
@@ -342,6 +398,9 @@ void MainWindow::startSimulation() {
         simulator_ = std::move(simulator);
         stopRequested_ = std::move(stopping);
         lastEvents_.clear();
+        lastSnapshot_ = {};
+        canvas_->resetAnimation();
+        events_->setPlainText("Preparando los vehículos y los semáforos...");
         setControlsEnabled(false);
         stop_->setEnabled(true);
         state_->setText("EN EJECUCIÓN");
@@ -380,7 +439,7 @@ void MainWindow::resetView() {
     eoProgress_->setValue(0);
     phase_->setText("Semáforos en rojo");
     state_->setText("LISTO PARA INICIAR");
-    canvas_->setTraffic(false, false, false, 0, 0);
+    canvas_->resetAnimation();
     setControlsEnabled(true);
     stop_->setEnabled(false);
     export_->setEnabled(false);
@@ -435,8 +494,7 @@ void MainWindow::renderSnapshot(const QJsonObject& s) {
     phase_->setText(nsOn ? "NORTE–SUR EN VERDE  •  ESTE–OESTE EN ROJO"
                        : eoOn ? "ESTE–OESTE EN VERDE  •  NORTE–SUR EN ROJO"
                               : "FASE DE SEGURIDAD  •  AMBOS EN ROJO");
-    canvas_->setTraffic(nsOn, eoOn, s.value("occupied").toBool(),
-                        nsMade - nsDone, eoMade - eoDone);
+    canvas_->setSnapshot(s);
     const auto error = s.value("error").toString();
     if (!error.isEmpty()) state_->setText("ERROR: " + error);
     else if (running) state_->setText("EN EJECUCIÓN");
