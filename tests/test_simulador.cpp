@@ -1,5 +1,8 @@
 #include "Simulador.hpp"
 #include <atomic>
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <cassert>
 #include <chrono>
 #include <thread>

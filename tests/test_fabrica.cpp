@@ -1,4 +1,7 @@
 #include "FabricaVehiculos.hpp"
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <cassert>
 
 int main() {
