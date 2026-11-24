@@ -52,3 +52,13 @@ if(BUILD_TESTING)
     target_include_directories(test_monitor PRIVATE include)
     add_test(NAME monitor_json COMMAND test_monitor)
 endif()
+
+# La interfaz utiliza el navegador como vista; no requiere bibliotecas GUI externas.
+add_library(simtrrafic_web src/ServidorWeb.cpp)
+target_include_directories(simtrrafic_web PUBLIC include)
+target_link_libraries(simtrrafic_web PUBLIC simtrrafic_core Threads::Threads)
+target_compile_definitions(simtrrafic_web PRIVATE SIMTRAFFIC_WEB_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/web")
+if(WIN32)
+    target_link_libraries(simtrrafic_web PRIVATE ws2_32)
+endif()
+target_link_libraries(simtrrafic PRIVATE simtrrafic_web)
