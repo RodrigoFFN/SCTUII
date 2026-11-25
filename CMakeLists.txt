@@ -52,3 +52,15 @@ if(BUILD_TESTING)
     target_include_directories(test_monitor PRIVATE include)
     add_test(NAME monitor_json COMMAND test_monitor)
 endif()
+
+# Qt Quick es la interfaz principal. La consola no necesita Qt.
+option(BUILD_QT_QUICK "Compilar la interfaz Qt Quick/QML" OFF)
+if(BUILD_QT_QUICK)
+    find_package(Qt6 6.2 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
+    add_library(simtrrafic_qt_controller STATIC
+        gui/SimulationController.cpp gui/SimulationController.hpp
+        gui/VehicleModel.cpp gui/VehicleModel.hpp)
+    set_target_properties(simtrrafic_qt_controller PROPERTIES AUTOMOC ON)
+    target_include_directories(simtrrafic_qt_controller PUBLIC gui)
+    target_link_libraries(simtrrafic_qt_controller PUBLIC simtrrafic_core Qt6::Core)
+endif()
