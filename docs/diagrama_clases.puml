@@ -31,9 +31,10 @@ class FabricaVehiculos
 class PoliticaSemaforo
 class Estadisticas
 class MonitorSimulacion
-class MainWindow <<Qt6>>
-class TrafficCanvas <<Qt6>>
-class ServidorWeb
+class SimulationController <<QObject>>
+class VehicleModel <<QAbstractListModel>>
+class EventLogModel <<QAbstractListModel>>
+class "Interfaz QML" as QML
 
 Simulador *-- ConfiguracionSimulacion
 Simulador ..> Carril
@@ -45,9 +46,9 @@ Simulador ..> MonitorSimulacion : callback de eventos
 Carril *-- Cola
 Cola o-- Vehiculo
 Interseccion *-- "2" Semaforo
-ServidorWeb *-- MonitorSimulacion
-ServidorWeb ..> Simulador
-MainWindow *-- TrafficCanvas
-MainWindow o-- MonitorSimulacion
-MainWindow ..> Simulador : hilo de trabajo
+QML ..> SimulationController : propiedades y señales
+SimulationController *-- VehicleModel
+SimulationController *-- EventLogModel
+SimulationController *-- MonitorSimulacion
+SimulationController ..> Simulador : hilo de trabajo
 @enduml

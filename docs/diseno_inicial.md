@@ -1,3 +1,5 @@
+> Documento histórico de versiones anteriores. La interfaz principal desde 1.2.0 (rediseñada en 1.3.0) es Qt Quick; consulta el README y `docs/GUI_QT6.md` para compilar la versión actual.
+
 > Documento histórico del tercer avance (`v0.3.0`). Para la versión integrada y la GUI consulte `README.md` y `docs/AVANCE_FINAL.md`.
 
 # Diseño de SimTrrafic

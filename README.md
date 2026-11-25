@@ -1,168 +1,101 @@
 # SimTrrafic
 
-**Simulador concurrente de tráfico urbano**  
-Tecnología de Objetos · C++17 · Qt 6
+Simulador concurrente de una intersección para Tecnología de Objetos II (SCTUII). El motor está escrito en C++17 y la interfaz de escritorio utiliza Qt Quick/QML. Esta versión **1.3.0** mejora la vista urbana, los controles y la lectura de resultados.
 
-SimTrrafic simula el tránsito de vehículos en una intersección con dos ejes: Norte–Sur y Este–Oeste. La generación de vehículos, las colas de espera y el control de semáforos se ejecutan de forma concurrente.
+![Simulación de tráfico](docs/captura_simulacion.png)
 
-El mismo motor de simulación se utiliza en la aplicación de escritorio desarrollada con Qt 6, el panel web local y la versión de consola.
+## Abrir en Qt Creator
 
-## Funcionalidades
+1. Descomprime el ZIP y abre `CMakeLists.txt`.
+2. Selecciona un kit de escritorio **Qt 6.2 o superior**, con Qt Quick, QML, Quick Controls, Layouts y Dialogs. Las pruebas gráficas usan también Qt Test.
+3. Configura el proyecto con `BUILD_QT_QUICK=ON`, compila y elige **simtrrafic_qt** como ejecutable.
+4. Ejecuta. Todos los componentes visuales están incluidos en los recursos del programa.
 
-- Generación de autos y buses en ambos ejes.
-- Colas concurrentes para gestionar los vehículos en espera.
-- Semáforos con ciclos fijos o ajuste adaptativo según la cantidad de vehículos pendientes.
-- Fase de seguridad con ambos semáforos en rojo y control de acceso a la zona de cruce.
-- Configuración de cantidad de vehículos y tiempos de llegada, cruce y semáforos.
-- Estadísticas de vehículos generados, atendidos y pendientes, además de tiempos de espera estimados.
-- Interfaz Qt 6 con vehículos animados, estado de los semáforos, controles y registro de eventos.
-- Panel web local y ejecución por consola.
-- Pruebas automatizadas con CTest.
+Se requiere CMake 3.16 o superior y un compilador C++17. En Windows, usa el compilador correspondiente a tu kit de Qt: MinGW con MinGW, o MSVC con MSVC. Qt Creator configura normalmente las rutas del kit.
 
-## Requisitos
+Si CMake no encuentra Qt, añade `CMAKE_PREFIX_PATH` apuntando a tu instalación; por ejemplo `C:/Qt/6.8.3/mingw_64`. La ruta es ilustrativa.
 
-- Compilador compatible con **C++17** (GCC, Clang o MSVC).
-- **CMake 3.16** o superior.
-- **Qt 6.2** o superior, con el módulo Widgets, para la aplicación de escritorio.
-- **Python 3** para la prueba automatizada de la API web (opcional).
+## Compilar en Linux
 
-El motor, la consola y el panel web no requieren Qt. La compilación se realiza con CMake en Windows, Linux o macOS, siempre que las dependencias estén instaladas.
-
-## Compilación y ejecución
-
-### Interfaz de escritorio (Qt 6)
-
-Desde la carpeta del proyecto:
+En Debian/Ubuntu, instala los módulos de desarrollo y ejecución:
 
 ```bash
-cmake -S . -B build-qt -DBUILD_QT_GUI=ON
-cmake --build build-qt --config Release --parallel
+sudo apt install build-essential cmake qt6-base-dev qt6-declarative-dev \
+  qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts \
+  qml6-module-qtquick-window qml6-module-qtquick-dialogs \
+  qml6-module-qtquick-templates qml6-module-qtqml-workerscript
+
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build -j4
+ctest --test-dir build --output-on-failure
+./build/simtrrafic_qt
 ```
 
-Si CMake no detecta Qt, se puede indicar su instalación mediante `CMAKE_PREFIX_PATH`:
+## Compilar en Windows
 
-```bash
-cmake -S . -B build-qt -DBUILD_QT_GUI=ON -DCMAKE_PREFIX_PATH="RUTA_DE_QT"
-```
-
-Ejecutar en Linux o macOS con un generador de una sola configuración:
-
-```bash
-./build-qt/simtrrafic_qt
-```
-
-En Windows con un generador de varias configuraciones, por ejemplo Visual Studio:
+Desde la terminal del kit Qt, o usando Qt Creator:
 
 ```powershell
-.\build-qt\Release\simtrrafic_qt.exe
+cmake -S . -B build -DCMAKE_PREFIX_PATH="C:/Qt/6.8.3/mingw_64"
+cmake --build build --config Debug
+ctest --test-dir build -C Debug --output-on-failure
 ```
 
-La ubicación del ejecutable depende del generador de CMake utilizado.
+Con MinGW, el ejecutable suele ser `build/simtrrafic_qt.exe`; con Visual Studio, `build/Debug/simtrrafic_qt.exe`. Para distribuirlo fuera de Qt Creator, usa `windeployqt --qmldir gui/qml` del mismo kit y pasa la ruta del ejecutable.
 
-### Consola y panel web
+## Uso
+
+- Selecciona **Flujo bajo**, **Flujo normal** u **Hora punta**. También puedes escribir valores en los campos numéricos o usar sus botones. Los parámetros se bloquean mientras el motor está activo.
+- Selecciona ciclo fijo o política adaptativa e inicia. **Detener** solicita el cierre ordenado de los hilos; **Reiniciar** limpia los resultados cuando la ejecución ya terminó.
+- Arrastra el separador situado sobre la bitácora para cambiar su altura. El botón **− / +** permite plegarla o recuperarla.
+- Activa **Zona crítica** para mostrar su límite. Los estados de ocupación y semáforos proceden del motor.
+- **Reducir movimiento** coloca las colas directamente y simplifica la representación del cruce y la salida.
+- Desactiva **Seguir** para revisar eventos anteriores. **Exportar CSV** guarda el historial completo, no solo las filas visibles. Los fallos de escritura aparecen en la barra inferior.
+- Atajos: **Ctrl+Return** para iniciar y **Ctrl+E** para exportar. Tab y Mayús+Tab recorren los controles; las flechas permiten ajustar campos y seleccionar opciones.
+
+Los autos usan tonos verdes o azules según el eje y los buses tonos arena. El tipo de vehículo es el que informa el dominio; no se deduce del color. Norte–Sur se dibuja de norte a sur y Este–Oeste de oeste a este. Las posiciones son ilustrativas: no representan distancias ni velocidades físicas. La escena no añade giros, agentes peatonales ni direcciones adicionales al motor.
+
+| Parámetro | Predeterminado de consola | Rango |
+|---|---:|---:|
+| Vehículos por eje | 6 | 1–60 |
+| Intervalo de llegada | 90 ms | 10–5000 ms |
+| Tiempo de cruce | 130 ms | 20–5000 ms |
+| Duración del verde | 1000 ms | 100–10000 ms |
+| Transición en rojo | 220 ms | 20–5000 ms |
+
+Los escenarios de la interfaz conservan los tiempos de la entrega anterior, más fáciles de observar que los valores de consola. Al editar la cantidad antes de iniciar, el total previsto se actualiza inmediatamente.
+
+## Consola sin Qt
 
 ```bash
-cmake -S . -B build
-cmake --build build --config Release --parallel
+cmake -S . -B build-cli -DBUILD_QT_QUICK=OFF
+cmake --build build-cli -j4
+ctest --test-dir build-cli --output-on-failure
+./build-cli/simtrrafic --vehiculos 10 --llegada-ms 70 --cruce-ms 120 --verde-ms 900 --rojo-ms 200
+./build-cli/simtrrafic --adaptativo
+./build-cli/simtrrafic --help
 ```
 
-Iniciar la simulación por consola:
+## Organización
 
-```bash
-./build/simtrrafic
-```
+| Archivos | Responsabilidad |
+|---|---|
+| `include/`, `src/Simulador.cpp` | Motor, colas concurrentes, exclusión mutua, políticas y telemetría. |
+| `gui/main_quick.cpp` | Arranque del escritorio y carga de recursos QML. |
+| `gui/SimulationController.*` | Configuración, hilo de trabajo, estadísticas, bitácora y CSV. |
+| `gui/VehicleModel.*` | Posiciones de presentación, separación de colas y etapas reales. |
+| `gui/qml/Main.qml`, `Theme.qml` | Distribución y paleta compartida. |
+| `gui/qml/components/` | Paneles, controles, entorno urbano, vehículos y semáforos. |
+| `tests/` | Pruebas del motor, controlador, modelo visual e interacción QML. |
 
-Iniciar el panel web:
+El controlador consulta instantáneas protegidas por mutex cada 35 ms y actualiza las posiciones aproximadamente cada 16 ms, siempre en el hilo de la interfaz. El simulador y sus cinco hilos internos trabajan por separado. Al cerrar, el controlador cancela y une el hilo de trabajo. Un cruce ya reservado puede tardar hasta el tiempo de cruce configurado antes de terminar.
 
-```bash
-./build/simtrrafic --gui
-```
+Qt Quick es la única interfaz gráfica. Se retiraron el servidor HTTP, el frontend web y Qt Widgets después de comprobar las funciones migradas. Se conserva `MonitorSimulacion::json()` y su prueba para no eliminar cobertura del motor.
 
-Abrir [http://127.0.0.1:8080](http://127.0.0.1:8080) en el navegador. Para utilizar otro puerto:
+## Validación y límites
 
-```bash
-./build/simtrrafic --gui --port 8081
-```
+Consulta [las comprobaciones de Qt Quick](docs/GUI_QT6.md) y [el resumen de cambios](docs/AVANCE_FINAL.md).
 
-En Windows, utiliza el ejecutable `simtrrafic.exe` generado por CMake; con Visual Studio suele estar en `build\Release\`.
+La entrega se compiló y ejecutó en Linux con GCC 14.2 y Qt 6.8.2. Se verificaron los escenarios, las operaciones de ejecución, CSV, teclado, tamaños de ventana y escala del 150 %. Las capturas proceden de la aplicación ejecutada con el renderizador de software de Qt.
 
-## Parámetros de la simulación
-
-| Parámetro | Descripción | Predeterminado |
-| --- | --- | ---: |
-| `--vehiculos N` | Vehículos por eje | 6 |
-| `--llegada-ms N` | Intervalo entre llegadas | 90 ms |
-| `--cruce-ms N` | Tiempo de cruce por vehículo | 130 ms |
-| `--verde-ms N` | Duración base de la luz verde | 1000 ms |
-| `--rojo-ms N` | Duración de la fase con ambos semáforos en rojo | 220 ms |
-| `--adaptativo` | Ajuste del verde según la demanda | Desactivado |
-| `--fijo` | Ciclo semafórico de duración fija | Activado |
-| `--help` | Lista de opciones disponibles | — |
-
-Ejemplos:
-
-```bash
-./build/simtrrafic --vehiculos 10 --verde-ms 1500
-./build/simtrrafic --vehiculos 12 --adaptativo
-```
-
-En la aplicación Qt, estos valores también pueden modificarse desde el panel de configuración antes de iniciar la simulación.
-
-## Estructura del proyecto
-
-```text
-SCTUII/
-├── include/          # Clases y estructuras del simulador
-├── src/              # Motor, consola y servidor web
-├── gui/              # Interfaz de escritorio Qt 6
-├── web/              # Interfaz web (HTML, CSS y JavaScript)
-├── tests/            # Pruebas automatizadas
-├── docs/             # Documentación técnica
-├── CMakeLists.txt
-└── README.md
-```
-
-### Componentes principales
-
-| Componente | Función |
-| --- | --- |
-| `Vehiculo`, `FabricaVehiculos` | Representación y creación de vehículos. |
-| `ColaConcurrente`, `Carril` | Gestión de vehículos pendientes en cada eje. |
-| `Semaforo`, `Interseccion` | Control de luces y exclusión mutua del cruce. |
-| `ConfiguracionSimulacion` | Parámetros y validación de entradas. |
-| `PoliticaSemaforo` | Duración de fases fijas o adaptativas. |
-| `Estadisticas` | Registro de vehículos y tiempos de espera. |
-| `Simulador` | Coordinación de hilos y ejecución. |
-| `Eventos`, `MonitorSimulacion` | Publicación y consulta del estado de la simulación. |
-| `ServidorWeb` | Servidor HTTP para el panel local. |
-
-La simulación trabaja con dos generadores de vehículos, dos despachadores y un hilo de control de semáforos. Se utilizan `std::thread`, `std::mutex`, `std::condition_variable` y operaciones atómicas para coordinar el acceso a los datos compartidos.
-
-## Pruebas
-
-Para compilar y ejecutar las pruebas:
-
-```bash
-cmake -S . -B build -DBUILD_TESTING=ON
-cmake --build build --config Release --parallel
-ctest --test-dir build -C Release --output-on-failure
-```
-
-Para incluir las pruebas de la aplicación Qt:
-
-```bash
-cmake -S . -B build-qt -DBUILD_QT_GUI=ON -DBUILD_TESTING=ON
-cmake --build build-qt --config Release --parallel
-ctest --test-dir build-qt -C Release --output-on-failure
-```
-
-## Documentación
-
-- [Diseño inicial](docs/diseno_inicial.md)
-- [Interfaz Qt 6](docs/GUI_QT6.md)
-- [API y panel web](docs/API_WEB.md)
-- [Diagrama de clases](docs/diagrama_clases.puml)
-
-## Alcance
-
-La simulación representa una intersección simplificada. Los vehículos de la interfaz se animan a partir de eventos del motor; no se calcula movimiento físico real. La política adaptativa ajusta las fases según la demanda observada, sin utilizar un modelo de aprendizaje automático.
+No se ejecutó en Windows ni con Qt 6.2; la versión mínima se mantiene usando sus APIs, pero esos kits requieren una comprobación local. Tampoco se midió el rendimiento de una GPU física. Con cruces de 20 ms, una etapa puede transcurrir entre dos lecturas del monitor; la interfaz conserva los datos reales y no inventa movimientos o eventos para rellenarla.
