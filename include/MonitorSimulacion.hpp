@@ -4,21 +4,49 @@
 #include "Eventos.hpp"
 
 #include <chrono>
-#include <deque>
 #include <iomanip>
 #include <mutex>
+#include <map>
 #include <sstream>
 #include <string>
+#include <vector>
 
-// Estado protegido por mutex para publicar instantaneas JSON al navegador.
+// Instantaneas coherentes para las interfaces, protegidas por el mismo mutex.
 class MonitorSimulacion {
 public:
+    struct EstadoVehiculo {
+        Eje eje = Eje::NorteSur;
+        int etapa = 0;
+        int ms = 0;
+        int llegada = -1, cruce = -1, salida = -1;
+        std::string tipo;
+    };
+    struct Instantanea {
+        ConfiguracionSimulacion config{};
+        ResumenEstadisticas resumen{};
+        EstadoInterseccion estado{Luz::Rojo, Luz::Rojo, false};
+        std::map<int, EstadoVehiculo> vehiculos;
+        std::vector<EventoSimulacion> historial;
+        unsigned long long ejecucion = 0;
+        bool ejecutando = false, terminado = false, detenido = false;
+        long long tiempoMs = 0;
+        std::string error;
+    };
+    Instantanea instantanea() const {
+        std::lock_guard<std::mutex> bloqueo(mutex_);
+        return {config_, resumen_, estado_, vehiculos_, historial_, ejecucion_,
+                ejecutando_, terminado_, detenido_,
+                ejecutando_ ? elapsedUnsafe() : duracionFinalMs_, error_};
+    }
+
     void iniciar(const ConfiguracionSimulacion& configuracion) {
         std::lock_guard<std::mutex> bloqueo(mutex_);
         config_ = configuracion;
         resumen_ = {};
         estado_ = {Luz::Rojo, Luz::Rojo, false};
-        eventos_.clear();
+        historial_.clear();
+        vehiculos_.clear();
+        ++ejecucion_;
         error_.clear();
         ejecutando_ = true;
         terminado_ = false;
@@ -33,8 +61,24 @@ public:
         std::lock_guard<std::mutex> bloqueo(mutex_);
         resumen_ = resumen;
         estado_ = estado;
-        eventos_.push_front(evento);
-        if (eventos_.size() > 80) eventos_.pop_back();
+        // Historial completo de estados individuales, independiente de la bitacora limitada.
+        const int etapa = evento.tipo == "llegada" ? 1 : evento.tipo == "cruce" ? 2 :
+                          evento.tipo == "paso" ? 3 : 0;
+        if (etapa && evento.vehiculoId > 0) {
+            auto& v = vehiculos_[evento.vehiculoId];
+            v.eje = evento.eje;
+            if (etapa >= v.etapa) {
+                v.etapa = etapa;
+                v.ms = evento.transcurridosMs;
+            }
+            if (etapa == 1) {
+                v.llegada = evento.transcurridosMs;
+                v.tipo = evento.tipoVehiculo;
+            }
+            if (etapa == 2) v.cruce = evento.transcurridosMs;
+            if (etapa == 3) v.salida = evento.transcurridosMs;
+        }
+        historial_.push_back(evento);
     }
 
     void finalizar(const ResumenEstadisticas& resumen, bool detenido) {
@@ -65,7 +109,9 @@ public:
         if (ejecutando_) return;
         resumen_ = {};
         estado_ = {Luz::Rojo, Luz::Rojo, false};
-        eventos_.clear();
+        historial_.clear();
+        vehiculos_.clear();
+        ++ejecucion_;
         error_.clear();
         terminado_ = false;
         detenido_ = false;
@@ -94,7 +140,7 @@ public:
                                   estado_.esteOeste == Luz::Verde ? "eo" : "rojo";
         std::ostringstream out;
         out << std::fixed << std::setprecision(1);
-        out << "{\"running\":" << (ejecutando_ ? "true" : "false")
+        out << "{\"run_id\":" << ejecucion_ << ",\"running\":" << (ejecutando_ ? "true" : "false")
             << ",\"finished\":" << (terminado_ ? "true" : "false")
             << ",\"stopped\":" << (detenido_ ? "true" : "false")
             << ",\"phase\":\"" << fase << "\""
@@ -117,9 +163,26 @@ public:
             << ",\"green\":" << config_.duracionVerdeMs
             << ",\"red\":" << config_.duracionTodoRojoMs
             << ",\"adaptive\":" << (config_.adaptativo ? "true" : "false") << "}"
-            << ",\"events\":[";
+            << ",\"vehicles\":[";
+        bool primerVehiculo = true;
+        for (const auto& par : vehiculos_) {
+            if (!primerVehiculo) out << ',';
+            primerVehiculo = false;
+            const auto& v = par.second;
+            out << "{\"id\":" << par.first
+                << ",\"axis\":\"" << (v.eje == Eje::NorteSur ? "ns" : "eo")
+                << "\",\"stage\":\"" << (v.etapa == 1 ? "waiting" : v.etapa == 2 ? "crossing" : "served")
+                << "\",\"ms\":" << v.ms
+                << ",\"vehicle_type\":\"" << escapar(v.tipo) << "\""
+                << ",\"arrival_ms\":" << v.llegada
+                << ",\"cross_ms\":" << v.cruce
+                << ",\"served_ms\":" << v.salida << '}';
+        }
+        out << "],\"events\":[";
         bool primero = true;
-        for (const auto& evento : eventos_) {
+        int cantidadEventos = 0;
+        for (auto it = historial_.rbegin(); it != historial_.rend() && cantidadEventos < 80; ++it, ++cantidadEventos) {
+            const auto& evento = *it;
             if (!primero) out << ',';
             primero = false;
             out << "{\"type\":\"" << escapar(evento.tipo) << "\""
@@ -141,7 +204,9 @@ private:
     ConfiguracionSimulacion config_{};
     ResumenEstadisticas resumen_{};
     EstadoInterseccion estado_{Luz::Rojo, Luz::Rojo, false};
-    std::deque<EventoSimulacion> eventos_;
+    std::map<int, EstadoVehiculo> vehiculos_;
+    unsigned long long ejecucion_ = 0;
+    std::vector<EventoSimulacion> historial_;
     std::string error_;
     bool ejecutando_ = false;
     bool terminado_ = false;

@@ -61,6 +61,8 @@ ResumenEstadisticas Simulador::ejecutar() const {
     auto interseccion = std::make_shared<Interseccion>();
     Estadisticas estadisticas;
     std::mutex mutexSalida;
+    std::mutex mutexPublicacion;
+    std::mutex mutexLlegadas;
     const auto inicio = RelojSimulacion::now();
     const int cantidad = config_.vehiculosPorEje;
     const int total = cantidad * 2;
@@ -71,7 +73,8 @@ ResumenEstadisticas Simulador::ejecutar() const {
     }
 
     auto publicar = [&](const std::string& tipo, Eje eje, int id,
-                        const std::string& mensaje) {
+                        const std::string& mensaje, const std::string& tipoVehiculo = {}) {
+        std::lock_guard<std::mutex> orden(mutexPublicacion);
         if (config_.mostrarConsola) {
             std::lock_guard<std::mutex> bloqueo(mutexSalida);
             std::cout << mensaje << '\n';
@@ -80,7 +83,7 @@ ResumenEstadisticas Simulador::ejecutar() const {
             const int transcurridos = static_cast<int>(
                 std::chrono::duration_cast<std::chrono::milliseconds>(
                     RelojSimulacion::now() - inicio).count());
-            observador_({tipo, eje, id, mensaje, transcurridos},
+            observador_({tipo, eje, id, mensaje, transcurridos, tipoVehiculo},
                         estadisticas.resumenFinal(), interseccion->estado());
         }
     };
@@ -91,11 +94,15 @@ ResumenEstadisticas Simulador::ejecutar() const {
         const Eje eje = carril.eje();
         for (int i = 0; i < cantidad && !parar_.load(); ++i) {
             const auto vehiculo = FabricaVehiculos::crear(idInicial + i);
-            if (carril.agregar(vehiculo)) {
-                estadisticas.registrarGenerado(eje);
-                publicar("llegada", eje, vehiculo.id,
-                         "[LLEGADA] " + std::string(nombreEje(eje)) +
-                         " | " + vehiculo.tipo + " #" + std::to_string(vehiculo.id));
+            {
+                // Publicar la llegada antes de notificar visualmente su cruce.
+                std::lock_guard<std::mutex> orden(mutexLlegadas);
+                if (carril.agregar(vehiculo)) {
+                    estadisticas.registrarGenerado(eje);
+                    publicar("llegada", eje, vehiculo.id,
+                             "[LLEGADA] " + std::string(nombreEje(eje)) +
+                             " | " + vehiculo.tipo + " #" + std::to_string(vehiculo.id), vehiculo.tipo);
+                }
             }
             if (esperarOParar(std::chrono::milliseconds(config_.intervaloLlegadaMs))) break;
         }
@@ -107,14 +114,13 @@ ResumenEstadisticas Simulador::ejecutar() const {
         while (!parar_.load()) {
             auto vehiculo = carril.extraer();
             if (!vehiculo) break;
-            // El evento se emite exactamente despues de reservar el cruce.
-            // Qt anima el vehiculo a partir de este instante real del motor.
-            if (!interseccion->cruzar(
-                    eje, std::chrono::milliseconds(config_.tiempoCruceMs), [&] {
-                        publicar("cruce_inicio", eje, vehiculo->id,
-                                 "[CRUCE] " + std::string(nombreEje(eje)) +
-                                 " | Vehiculo #" + std::to_string(vehiculo->id));
-                    })) break;
+            if (!interseccion->cruzar(eje, std::chrono::milliseconds(config_.tiempoCruceMs), [&] {
+                std::lock_guard<std::mutex> orden(mutexLlegadas);
+                publicar("cruce", eje, vehiculo->id,
+                         "[CRUCE] " + std::string(nombreEje(eje)) +
+                         " | Vehiculo #" + std::to_string(vehiculo->id));
+            }))
+                break;
             const auto transcurridos = std::chrono::duration_cast<std::chrono::milliseconds>(
                 RelojSimulacion::now() - vehiculo->llegada).count();
             // El tiempo de cola se estima restando el tiempo de ocupacion.

@@ -16,20 +16,24 @@ int main() {
     c.duracionTodoRojoMs = 20;
     c.adaptativo = true;
     c.mostrarConsola = false;
-    std::atomic<int> llegadas{0}, pasos{0}, fases{0};
+    std::atomic<int> llegadas{0}, pasos{0}, cruces{0}, fases{0};
     Simulador simulador(c, [&](const EventoSimulacion& evento, const ResumenEstadisticas& r,
                                const EstadoInterseccion& luces) {
         assert(!(luces.norteSur == Luz::Verde && luces.esteOeste == Luz::Verde));
         assert(r.pendientes() >= 0);
-        if (evento.tipo == "llegada") ++llegadas;
+        if (evento.tipo == "llegada") {
+            ++llegadas;
+            assert(evento.tipoVehiculo == (evento.vehiculoId % 3 == 0 ? "Bus" : "Auto"));
+        }
         if (evento.tipo == "paso") ++pasos;
+        if (evento.tipo == "cruce") ++cruces;
         if (evento.tipo == "fase") ++fases;
     });
     const auto fin = simulador.ejecutar();
     assert(fin.totalGenerados() == 4);
     assert(fin.totalAtendidos() == 4);
     assert(fin.pendientes() == 0);
-    assert(llegadas == 4 && pasos == 4 && fases > 0);
+    assert(llegadas == 4 && pasos == 4 && cruces == 4 && fases > 0);
     assert(fin.esperaPromedio() >= 0.0);
 
     // Detencion de una simulacion larga: no debe quedarse bloqueada en un rojo.

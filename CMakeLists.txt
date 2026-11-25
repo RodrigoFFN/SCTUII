@@ -52,10 +52,3 @@ if(BUILD_TESTING)
     target_include_directories(test_monitor PRIVATE include)
     add_test(NAME monitor_json COMMAND test_monitor)
 endif()
-
-# Validar que los coches se animan tras la reserva real de la interseccion.
-if(BUILD_TESTING)
-    add_executable(test_eventos_cruce tests/test_eventos_cruce.cpp)
-    target_link_libraries(test_eventos_cruce PRIVATE simtrrafic_core)
-    add_test(NAME eventos_cruce_reales COMMAND test_eventos_cruce)
-endif()
