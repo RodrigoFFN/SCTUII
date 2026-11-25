@@ -82,4 +82,26 @@ if(BUILD_QT_QUICK)
             gui/qml/components/UiButton.qml gui/qml/components/UiSpinBox.qml
             gui/qml/components/UiComboBox.qml gui/qml/components/UiCheckBox.qml
             gui/qml/components/UiProgressBar.qml)
+    if(BUILD_TESTING)
+        add_executable(test_vehicle_model tests/test_vehicle_model.cpp)
+        target_link_libraries(test_vehicle_model PRIVATE simtrrafic_qt_controller)
+        add_test(NAME vehiculos_qt_quick COMMAND test_vehicle_model)
+        find_package(Qt6 6.2 REQUIRED COMPONENTS Test)
+        add_executable(test_qt_interface tests/test_qt_interface.cpp)
+        target_link_libraries(test_qt_interface PRIVATE simtrrafic_qt_controller Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2 Qt6::Test)
+        target_compile_definitions(test_qt_interface PRIVATE SIMTRAFFIC_QML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/gui/qml")
+        add_test(NAME interfaz_qt_quick_integracion COMMAND test_qt_interface)
+        set_tests_properties(interfaz_qt_quick_integracion PROPERTIES
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 120)
+        add_test(NAME interfaz_qt_quick_hidpi COMMAND test_qt_interface --layout-only)
+        set_tests_properties(interfaz_qt_quick_hidpi PROPERTIES
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software;QT_SCALE_FACTOR=1.5" TIMEOUT 20)
+        add_executable(test_qt_controller tests/test_qt_controller.cpp)
+        target_link_libraries(test_qt_controller PRIVATE simtrrafic_qt_controller)
+        add_test(NAME controlador_qt_quick COMMAND test_qt_controller)
+        set_tests_properties(controlador_qt_quick PROPERTIES TIMEOUT 30)
+        add_test(NAME interfaz_qt_quick_smoke COMMAND simtrrafic_qt --smoke-test)
+        set_tests_properties(interfaz_qt_quick_smoke PROPERTIES
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software" TIMEOUT 15)
+    endif()
 endif()
