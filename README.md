@@ -89,13 +89,3 @@ ctest --test-dir build-cli --output-on-failure
 | `tests/` | Pruebas del motor, controlador, modelo visual e interacción QML. |
 
 El controlador consulta instantáneas protegidas por mutex cada 35 ms y actualiza las posiciones aproximadamente cada 16 ms, siempre en el hilo de la interfaz. El simulador y sus cinco hilos internos trabajan por separado. Al cerrar, el controlador cancela y une el hilo de trabajo. Un cruce ya reservado puede tardar hasta el tiempo de cruce configurado antes de terminar.
-
-Qt Quick es la única interfaz gráfica. Se retiraron el servidor HTTP, el frontend web y Qt Widgets después de comprobar las funciones migradas. Se conserva `MonitorSimulacion::json()` y su prueba para no eliminar cobertura del motor.
-
-## Validación y límites
-
-Consulta [las comprobaciones de Qt Quick](docs/GUI_QT6.md) y [el resumen de cambios](docs/AVANCE_FINAL.md).
-
-La entrega se compiló y ejecutó en Linux con GCC 14.2 y Qt 6.8.2. Se verificaron los escenarios, las operaciones de ejecución, CSV, teclado, tamaños de ventana y escala del 150 %. Las capturas proceden de la aplicación ejecutada con el renderizador de software de Qt.
-
-No se ejecutó en Windows ni con Qt 6.2; la versión mínima se mantiene usando sus APIs, pero esos kits requieren una comprobación local. Tampoco se midió el rendimiento de una GPU física. Con cruces de 20 ms, una etapa puede transcurrir entre dos lecturas del monitor; la interfaz conserva los datos reales y no inventa movimientos o eventos para rellenarla.
