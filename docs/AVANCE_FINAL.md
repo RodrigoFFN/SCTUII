@@ -56,22 +56,3 @@ Después de verificar inicio, configuración, estadísticas, animación, parada,
 ## Arquitectura
 
 Se mantiene el motor C++17 y la comunicación directa mediante `SimulationController`, instantáneas tipadas y modelos de Qt. Qt Quick queda como única interfaz gráfica y la consola sigue compilando sin Qt. No se modificaron `src/Simulador.cpp` ni las clases del dominio: hilos, mutex, colas, políticas y exclusión mutua conservan su implementación original. Se mantuvieron las ocho pruebas del motor, incluida la serialización del monitor.
-
-## Resultados de validación
-
-- Compilación real en Debian 13, GCC 14.2, CMake 3.31.6 y Qt 6.8.2.
-- **13/13 pruebas CTest aprobadas**: ocho del motor y cinco de Qt (modelo, controlador, integración, DPI y arranque).
-- Configuración separada con `BUILD_QT_QUICK=OFF`: **8/8 pruebas aprobadas**, más una ejecución de consola con 4/4 vehículos atendidos.
-- Escenarios exactos de la interfaz: flujo bajo **6/6**, flujo normal **12/12** y hora punta **32/32**, todos con cero pendientes.
-- Carga máxima del controlador: **120/120** vehículos atendidos.
-- Apertura y aceptación del diálogo QML de exportación, CSV con encabezado y todas las filas, y respuesta ante un destino inválido.
-- Capturas inspeccionadas a 1280×720, 1366×768 y 1920×1080; comprobación adicional al 150 %.
-- Pruebas gráficas repetidas después del ajuste final de trazos del mapa, sin errores QML.
-
-Las capturas usan el renderizador de software de Qt. La animación está ligada a los tiempos y eventos del motor; los intervalos mínimos pueden ser más cortos que un ciclo de lectura. No se probó Windows, un kit Qt 6.2 ni el rendimiento de una GPU física. Esas verificaciones quedan pendientes y no se sustituyen por las pruebas de Linux.
-
-## Commit recomendado
-
-```text
-feat(gui): rediseñar la interfaz Qt Quick y mejorar la visualización del tráfico
-```
