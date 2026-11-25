@@ -53,52 +53,6 @@ if(BUILD_TESTING)
     add_test(NAME monitor_json COMMAND test_monitor)
 endif()
 
-# La interfaz utiliza el navegador como vista; no requiere bibliotecas GUI externas.
-add_library(simtrrafic_web src/ServidorWeb.cpp)
-target_include_directories(simtrrafic_web PUBLIC include)
-target_link_libraries(simtrrafic_web PUBLIC simtrrafic_core Threads::Threads)
-target_compile_definitions(simtrrafic_web PRIVATE SIMTRAFFIC_WEB_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/web")
-if(WIN32)
-    target_link_libraries(simtrrafic_web PRIVATE ws2_32)
-endif()
-target_link_libraries(simtrrafic PRIVATE simtrrafic_web)
-
-find_package(Python3 COMPONENTS Interpreter QUIET)
-if(BUILD_TESTING AND Python3_Interpreter_FOUND)
-    add_test(NAME api_web_e2e
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_web_api.py $<TARGET_FILE:simtrrafic>)
-    set_tests_properties(api_web_e2e PROPERTIES TIMEOUT 20)
-endif()
-
-# Interfaz de escritorio opcional en Qt 6 Widgets (independiente del panel web).
-option(BUILD_QT_GUI "Compilar la aplicacion de escritorio Qt 6" OFF)
-if(BUILD_QT_GUI)
-    find_package(Qt6 6.2 REQUIRED COMPONENTS Widgets)
-    add_executable(simtrrafic_qt
-        gui/main_qt.cpp
-        gui/MainWindow.cpp
-        gui/TrafficCanvas.cpp
-    )
-    target_include_directories(simtrrafic_qt PRIVATE gui include)
-    target_link_libraries(simtrrafic_qt PRIVATE simtrrafic_core Qt6::Widgets)
-
-    # Prueba de apertura de la ventana sin necesidad de un monitor fisico.
-    if(BUILD_TESTING)
-        add_test(NAME interfaz_qt_smoke COMMAND $<TARGET_FILE:simtrrafic_qt> --smoke-test)
-        set_tests_properties(interfaz_qt_smoke PROPERTIES
-            ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
-            TIMEOUT 15
-        )
-    endif()
-endif()
-
-# El modelo de animacion se verifica sin Qt (apto para CI sin escritorio).
-if(BUILD_TESTING)
-    add_executable(test_animacion tests/test_animacion.cpp)
-    target_include_directories(test_animacion PRIVATE gui)
-    add_test(NAME animacion_eventos COMMAND test_animacion)
-endif()
-
 # Validar que los coches se animan tras la reserva real de la interseccion.
 if(BUILD_TESTING)
     add_executable(test_eventos_cruce tests/test_eventos_cruce.cpp)

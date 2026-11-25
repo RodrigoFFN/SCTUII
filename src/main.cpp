@@ -1,5 +1,4 @@
 #include "Simulador.hpp"
-#include "ServidorWeb.hpp"
 
 #include <exception>
 #include <iostream>
@@ -17,8 +16,6 @@ void ayuda(const char* ejecutable) {
               << "  --rojo-ms N      Tiempo de seguridad todo rojo (20-5000)\n"
               << "  --adaptativo     Ajuste heuristico de verde segun la demanda\n"
               << "  --fijo           Ciclo fijo (predeterminado)\n"
-              << "  --gui            Abrir servidor de interfaz local en navegador\n"
-              << "  --port N         Puerto del panel (1024-65535; predeterminado 8080)\n"
               << "  --help           Ver esta ayuda\n";
 }
 int enteroPositivo(const std::string& texto) {
@@ -32,19 +29,11 @@ int enteroPositivo(const std::string& texto) {
 int main(int argc, char* argv[]) {
     try {
         ConfiguracionSimulacion config;
-        bool interfaz = false;
-        int puerto = 8080;
         for (int i = 1; i < argc; ++i) {
             const std::string opcion = argv[i];
             if (opcion == "--help" || opcion == "-h") {
                 ayuda(argv[0]);
                 return 0;
-            }
-            if (opcion == "--gui") { interfaz = true; continue; }
-            if (opcion == "--port") {
-                if (i + 1 == argc) throw std::invalid_argument("Falta valor del puerto");
-                puerto = enteroPositivo(argv[++i]);
-                continue;
             }
             if (opcion == "--adaptativo") { config.adaptativo = true; continue; }
             if (opcion == "--fijo") { config.adaptativo = false; continue; }
@@ -62,7 +51,6 @@ int main(int argc, char* argv[]) {
             if (opcion == "--rojo-ms") config.duracionTodoRojoMs = valor;
         }
         config.validar();
-        if (interfaz) return ServidorWeb(puerto).ejecutar();
         const auto resumen = Simulador(config).ejecutar();
         return resumen.totalAtendidos() == 2 * config.vehiculosPorEje ? 0 : 1;
     } catch (const std::exception& error) {
