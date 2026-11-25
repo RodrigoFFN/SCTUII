@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
-project(SimTrrafic VERSION 1.2.0 LANGUAGES CXX)
+project(SimTrrafic VERSION 1.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(MSVC)
+    add_compile_options(/utf-8)
+endif()
 
 find_package(Threads REQUIRED)
 
@@ -54,7 +58,7 @@ if(BUILD_TESTING)
 endif()
 
 # Qt Quick es la interfaz principal. La consola no necesita Qt.
-option(BUILD_QT_QUICK "Compilar la interfaz Qt Quick/QML" OFF)
+option(BUILD_QT_QUICK "Compilar la interfaz Qt Quick/QML" ON)
 if(BUILD_QT_QUICK)
     find_package(Qt6 6.2 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2)
     add_library(simtrrafic_qt_controller STATIC
@@ -63,4 +67,19 @@ if(BUILD_QT_QUICK)
     set_target_properties(simtrrafic_qt_controller PROPERTIES AUTOMOC ON)
     target_include_directories(simtrrafic_qt_controller PUBLIC gui)
     target_link_libraries(simtrrafic_qt_controller PUBLIC simtrrafic_core Qt6::Core)
+
+    qt_add_executable(simtrrafic_qt gui/main_quick.cpp)
+    target_link_libraries(simtrrafic_qt PRIVATE simtrrafic_qt_controller
+        Qt6::Gui Qt6::Qml Qt6::Quick Qt6::QuickControls2)
+    # Recursos locales: no se necesita copiar los QML junto al ejecutable.
+    qt_add_resources(simtrrafic_qt "simtrrafic_qml"
+        PREFIX "/simtrrafic" BASE "${CMAKE_CURRENT_SOURCE_DIR}/gui"
+        FILES gui/qml/Main.qml gui/qml/Theme.qml
+            gui/qml/components/TopBar.qml gui/qml/components/ControlPanel.qml
+            gui/qml/components/StatisticsPanel.qml gui/qml/components/EventLog.qml
+            gui/qml/components/TrafficScene.qml gui/qml/components/Vehicle.qml
+            gui/qml/components/TrafficLight.qml gui/qml/components/UrbanBlock.qml
+            gui/qml/components/UiButton.qml gui/qml/components/UiSpinBox.qml
+            gui/qml/components/UiComboBox.qml gui/qml/components/UiCheckBox.qml
+            gui/qml/components/UiProgressBar.qml)
 endif()
